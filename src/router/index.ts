@@ -5,8 +5,8 @@ import CartPage from '../views/CartPage.vue'
 import SearchResults from '../views/SearchResults.vue'
 import FavoritesPage from '../views/FavoritesPage.vue'
 import ProductsPage from '../views/ProductsPage.vue'
-
-
+import LoginPage from '../views/LoginPage.vue'
+import RegisterPage from '../views/RegisterPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -40,6 +40,16 @@ const router = createRouter({
       path: '/favorites',
       name: 'favorites',
       component: FavoritesPage
+    },
+    {
+      path: '/login',
+      name: 'login',
+      component: LoginPage
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterPage
     }
   ]
 })
