@@ -1,6 +1,6 @@
 <template>
   <div class="home-page">
-    <!-- Hero Banner com Slideshow de Produtos (seu banner original) -->
+    <!-- Hero Banner com Slideshow de Produtos -->
     <HeroBanner />
     
     <div class="container">
@@ -10,9 +10,12 @@
       <!-- Banner Grid (Promoções) -->
       <BannerGrid />
       
-      <!-- Seção de Produtos em Destaque (Listagem) -->
+      <!-- Seção de Produtos em Destaque -->
       <ProductList />
     </div>
+    
+    <!-- Seções Parallax -->
+    <ParallaxSection />
   </div>
 </template>
 
@@ -23,6 +26,7 @@ import HeroBanner from '../components/HeroBanner.vue'
 import ProductList from '../components/ProductList.vue'
 import BannerFlash from '../components/BannerFlash.vue'
 import BannerGrid from '../components/BannerGrid.vue'
+import ParallaxSection from '../components/ParallaxSection.vue'
 
 const store = useProductsStore()
 

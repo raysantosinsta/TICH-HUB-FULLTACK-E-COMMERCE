@@ -13,7 +13,7 @@
       <div v-if="cartItems.length === 0" class="empty-cart">
         <div class="empty-cart-content">
           <div class="empty-cart-icon">
-            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none">
               <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="#D4AF37" stroke-width="1.5" fill="none"/>
             </svg>
           </div>
@@ -86,7 +86,7 @@
             </div>
 
             <div class="action-col">
-              <button class="remove-btn" @click="removeItem(item.product.id)">
+              <button class="remove-btn" @click="removeItem(item.product.id, item.product.title)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
                 </svg>
@@ -122,14 +122,15 @@
           <div class="summary-actions">
             <router-link to="/" class="continue-btn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M19 12H5M5 12L12 5M5 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 12H5M5 12L12 5M5 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
               Continuar comprando
             </router-link>
-            <button class="checkout-btn" @click="checkout">
-              Finalizar compra
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <button class="checkout-btn" @click="finalizeOrder" :disabled="checkoutLoading">
+              <span v-if="checkoutLoading" class="spinner-small"></span>
+              <span v-else>Finalizar compra</span>
+              <svg v-if="!checkoutLoading" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
               </svg>
             </button>
           </div>
@@ -140,14 +141,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
+import { useOrdersStore } from '../stores/orders'
+import { useAuthStore } from '../stores/auth'
 import { useToast } from '../plugins/toast'
+import { useConfirm } from '../plugins/confirm'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const ordersStore = useOrdersStore()
+const authStore = useAuthStore()
 const toast = useToast()
+const { confirm } = useConfirm()
+
+const checkoutLoading = ref(false)
 
 const cartItems = computed(() => cartStore.items)
 const subtotal = computed(() => cartStore.subtotal)
@@ -175,32 +184,85 @@ const truncateTitle = (title: string) => {
 
 const updateQuantity = (productId: number, quantity: number) => {
   cartStore.updateQuantity(productId, quantity)
-  toast.info('Quantidade atualizada', 'O valor total foi recalculado.', 2000)
 }
 
 const removeItem = (productId: number, productTitle: string) => {
   cartStore.removeFromCart(productId)
-  toast.success(
-    'Item removido',
-    `${productTitle} foi removido do carrinho.`,
-    3000
-  )
+  toast.success('Item removido', `${productTitle} foi removido do carrinho.`, 3000)
 }
 
 const goToProduct = (productId: number) => {
   router.push(`/product/${productId}`)
 }
 
-const checkout = () => {
-  toast.success(
-    'Pedido finalizado!',
-    `Total: R$ ${formatPrice(total.value)}. Obrigado pela compra!`,
-    4000
-  )
-  setTimeout(() => {
-    cartStore.clearCart()
-    router.push('/')
-  }, 2000)
+const finalizeOrder = async () => {
+  if (!authStore.isAuthenticated) {
+    const result = await confirm({
+      title: 'Login necessário',
+      message: 'Você precisa estar logado para finalizar a compra. Deseja fazer login agora?',
+      confirmText: 'Fazer login',
+      cancelText: 'Cancelar',
+      type: 'info'
+    })
+    
+    if (result) {
+      router.push('/login')
+    }
+    return
+  }
+
+  if (cartItems.value.length === 0) {
+    toast.warning('Carrinho vazio', 'Adicione produtos ao carrinho antes de finalizar.', 3000)
+    return
+  }
+
+  const result = await confirm({
+    title: 'Finalizar compra',
+    message: `Deseja finalizar a compra no valor total de R$ ${formatPrice(total.value)}?`,
+    confirmText: 'Confirmar compra',
+    cancelText: 'Cancelar',
+    type: 'warning'
+  })
+
+  if (result) {
+    checkoutLoading.value = true
+
+    // Simular processamento
+    setTimeout(() => {
+      // Criar itens do pedido
+      const orderItems = cartItems.value.map(item => ({
+        id: item.product.id,
+        name: item.product.title,
+        price: item.product.price,
+        quantity: item.quantity,
+        image: item.product.image,
+        category: item.product.category
+      }))
+
+      // Criar pedido
+      const order = ordersStore.createOrder(
+        orderItems,
+        subtotal.value,
+        shipping.value,
+        discount.value,
+        total.value
+      )
+
+      // Limpar carrinho
+      cartStore.clearCart()
+
+      checkoutLoading.value = false
+
+      toast.success(
+        'Pedido finalizado!',
+        `Pedido ${order.id} foi criado com sucesso.`,
+        4000
+      )
+
+      // Redirecionar para página de pedidos
+      router.push('/orders')
+    }, 1500)
+  }
 }
 
 onMounted(() => {
@@ -209,21 +271,13 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ========== VARIÁVEIS DE COR ========== */
-:root {
-  --black-primary: #0B0B0F;
-  --gold-primary: #D4AF37;
-  --white-soft: #F5F0E6;
-  --gray-dark: #3B3A40;
-}
-
+/* Seus estilos existentes do carrinho... */
 .cart-page {
   position: relative;
   min-height: 100vh;
   padding: 40px 0 80px;
 }
 
-/* Background Premium */
 .bg-premium {
   position: fixed;
   top: 0;
@@ -278,15 +332,12 @@ onMounted(() => {
   z-index: 1;
 }
 
-/* Page Title */
 .page-title {
   font-size: 2rem;
   color: var(--white-soft);
   margin-bottom: 32px;
-  font-weight: 600;
 }
 
-/* Empty Cart */
 .empty-cart {
   display: flex;
   justify-content: center;
@@ -331,14 +382,12 @@ onMounted(() => {
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
 }
 
-/* Cart Content */
 .cart-content {
   display: grid;
   grid-template-columns: 1fr 380px;
   gap: 40px;
 }
 
-/* Cart Items */
 .cart-items {
   background: rgba(11, 11, 15, 0.5);
   backdrop-filter: blur(10px);
@@ -375,7 +424,6 @@ onMounted(() => {
   border-radius: 12px;
 }
 
-/* Product Column */
 .product-info {
   display: flex;
   gap: 16px;
@@ -391,7 +439,6 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
   overflow: hidden;
 }
 
@@ -407,15 +454,11 @@ onMounted(() => {
   transform: scale(1.1);
 }
 
-.product-details {
-  flex: 1;
-}
-
 .product-title {
   color: var(--white-soft);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   cursor: pointer;
   transition: color 0.3s ease;
 }
@@ -425,17 +468,16 @@ onMounted(() => {
 }
 
 .product-category {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: rgba(245, 240, 230, 0.5);
 }
 
-/* Price Column */
-.price-col .price {
-  color: var(--white-soft);
+.price-col .price,
+.subtotal-col .subtotal {
+  color: var(--gold-primary);
   font-weight: 500;
 }
 
-/* Quantity Selector */
 .quantity-selector {
   display: inline-flex;
   align-items: center;
@@ -477,13 +519,6 @@ onMounted(() => {
   text-align: center;
 }
 
-/* Subtotal */
-.subtotal-col .subtotal {
-  color: var(--gold-primary);
-  font-weight: 600;
-}
-
-/* Remove Button */
 .remove-btn {
   background: transparent;
   border: none;
@@ -503,7 +538,6 @@ onMounted(() => {
   transform: scale(1.1);
 }
 
-/* Order Summary */
 .order-summary {
   background: rgba(11, 11, 15, 0.5);
   backdrop-filter: blur(10px);
@@ -587,20 +621,30 @@ onMounted(() => {
   transition: all 0.3s ease;
 }
 
-.checkout-btn:hover {
+.checkout-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
 }
 
-.checkout-btn svg {
-  transition: transform 0.3s ease;
+.checkout-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
-.checkout-btn:hover svg {
-  transform: translateX(5px);
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: var(--black-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
 }
 
-/* Animations */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -612,7 +656,6 @@ onMounted(() => {
   }
 }
 
-/* Responsividade */
 @media (max-width: 1024px) {
   .cart-content {
     grid-template-columns: 1fr;
@@ -683,41 +726,16 @@ onMounted(() => {
 }
 
 @media (max-width: 768px) {
-  .cart-page {
-    padding: 20px 0 60px;
-  }
-
   .container {
     padding: 0 16px;
   }
 
   .page-title {
     font-size: 1.5rem;
-    margin-bottom: 24px;
   }
 
   .cart-items {
     padding: 16px;
-  }
-
-  .order-summary {
-    padding: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .product-image {
-    width: 100px;
-    height: 100px;
-  }
-
-  .quantity-selector {
-    padding: 2px;
-  }
-
-  .qty-btn {
-    width: 28px;
-    height: 28px;
   }
 }
 </style>

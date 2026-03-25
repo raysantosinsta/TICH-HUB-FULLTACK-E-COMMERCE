@@ -25,6 +25,23 @@
   --warning-color: #ffc107;
 }
 
+/* Smooth Scroll */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Efeito de fade ao scroll */
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* Reset e estilos base */
 * {
   margin: 0;

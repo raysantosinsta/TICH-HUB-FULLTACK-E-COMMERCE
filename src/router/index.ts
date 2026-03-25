@@ -7,6 +7,7 @@ import FavoritesPage from '../views/FavoritesPage.vue'
 import ProductsPage from '../views/ProductsPage.vue'
 import LoginPage from '../views/LoginPage.vue'
 import RegisterPage from '../views/RegisterPage.vue'
+import OrdersPage from '../views/OrdersPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -50,6 +51,11 @@ const router = createRouter({
       path: '/register',
       name: 'register',
       component: RegisterPage
+    },
+    {
+      path: '/orders',
+      name: 'orders',
+      component: OrdersPage
     }
   ]
 })
