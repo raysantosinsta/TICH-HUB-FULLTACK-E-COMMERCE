@@ -5,6 +5,9 @@
       <div class="image-overlay">
         <span class="quick-view">Ver detalhes</span>
       </div>
+      <div class="favorite-overlay">
+        <FavoriteButton :product="product" :show-text="false" @update="onFavoriteUpdate" />
+      </div>
     </div>
     <div class="product-info">
       <h3 class="product-title">{{ truncateTitle(product.title) }}</h3>
@@ -15,7 +18,7 @@
       <div class="product-price">
         <span class="price">R$ {{ formatPrice(product.price) }}</span>
         <button class="add-to-cart" @click.stop="addToCart">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" fill="none" stroke-width="1.5"/>
           </svg>
           Adicionar
@@ -29,6 +32,7 @@
 import type { Product } from '../types'
 import { useCartStore } from '../stores/cart'
 import { useToast } from '../plugins/toast'
+import FavoriteButton from './FavoriteButton.vue'
 
 const props = defineProps<{
   product: Product
@@ -71,17 +75,14 @@ const addToCart = () => {
     3000
   )
 }
+
+const onFavoriteUpdate = (isFavorited: boolean) => {
+  // Evento já tratado no componente FavoriteButton
+}
 </script>
 
 <style scoped>
-/* ========== VARIÁVEIS DE COR ========== */
-:root {
-  --black-primary: #0B0B0F;
-  --gold-primary: #D4AF37;
-  --white-soft: #F5F0E6;
-  --gray-dark: #3B3A40;
-}
-
+/* Seus estilos existentes do ProductCard */
 .product-card {
   background: rgba(11, 11, 15, 0.6);
   backdrop-filter: blur(10px);
@@ -91,6 +92,7 @@ const addToCart = () => {
   transition: all 0.3s ease;
   cursor: pointer;
   border: 1px solid rgba(212, 175, 55, 0.2);
+  position: relative;
 }
 
 .product-card:hover {
@@ -99,7 +101,6 @@ const addToCart = () => {
   border-color: var(--gold-primary);
 }
 
-/* Imagem do Produto */
 .product-image {
   position: relative;
   height: 250px;
@@ -122,7 +123,6 @@ const addToCart = () => {
   transform: scale(1.08);
 }
 
-/* Overlay no hover */
 .image-overlay {
   position: absolute;
   top: 0;
@@ -141,6 +141,22 @@ const addToCart = () => {
   opacity: 1;
 }
 
+.favorite-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.product-card:hover .favorite-overlay {
+  opacity: 1;
+}
+
 .quick-view {
   background: var(--gold-primary);
   color: var(--black-primary);
@@ -156,7 +172,6 @@ const addToCart = () => {
   transform: translateY(0);
 }
 
-/* Informações do Produto */
 .product-info {
   padding: 18px;
 }
@@ -225,54 +240,13 @@ const addToCart = () => {
   border-color: var(--gold-primary);
 }
 
-.add-to-cart svg {
-  transition: transform 0.3s ease;
-}
-
-.add-to-cart:hover svg {
-  transform: translateX(2px);
-}
-
-/* Responsividade */
 @media (max-width: 768px) {
   .product-image {
     height: 220px;
   }
-
-  .product-info {
-    padding: 14px;
-  }
-
-  .product-title {
-    font-size: 0.9rem;
-    min-height: 42px;
-  }
-
-  .price {
-    font-size: 1.1rem;
-  }
-
-  .add-to-cart {
-    padding: 6px 12px;
-    font-size: 0.8rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .product-image {
-    height: 200px;
-  }
-
-  .product-info {
-    padding: 12px;
-  }
-
-  .product-title {
-    font-size: 0.85rem;
-  }
-
-  .stars {
-    font-size: 0.8rem;
+  
+  .favorite-overlay {
+    opacity: 1;
   }
 }
 </style>

@@ -6,6 +6,7 @@
     </main>
     <Footer />
     <Toast ref="toastRef" />
+    <ConfirmDialog ref="confirmDialogRef" />
   </div>
 </template>
 
@@ -14,14 +15,22 @@ import { onMounted, ref } from 'vue'
 import Navbar from './components/Navbar.vue'
 import Footer from './components/Footer.vue'
 import Toast from './components/Toast.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 import ToastPlugin from './plugins/toast'
+import ConfirmPlugin from './plugins/confirm'
 
 const toastRef = ref()
+const confirmDialogRef = ref()
 
 // Expor instância do toast globalmente
 onMounted(() => {
   if (toastRef.value) {
     ToastPlugin.setInstance(toastRef.value)
+  }
+  
+  // Inicializar o confirm dialog
+  if (confirmDialogRef.value) {
+    ConfirmPlugin.setInstance(confirmDialogRef.value)
   }
 })
 </script>

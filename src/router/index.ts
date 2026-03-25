@@ -3,7 +3,7 @@ import HomePage from '../views/HomePage.vue'
 import ProductDetail from '../views/ProductDetail.vue'
 import CartPage from '../views/CartPage.vue'
 import SearchResults from '../views/SearchResults.vue'
-
+import FavoritesPage from '../views/FavoritesPage.vue'
 
 
 const router = createRouter({
@@ -28,6 +28,11 @@ const router = createRouter({
       path: '/search',
       name: 'search',
       component: SearchResults
+    },
+     {
+      path: '/favorites',
+      name: 'favorites',
+      component: FavoritesPage
     }
   ]
 })
