@@ -8,6 +8,15 @@
       <div class="nav-links">
         <router-link to="/" class="nav-link">Home</router-link>
         <router-link to="/products" class="nav-link">Produtos</router-link>
+        <!-- Link para Admin (só aparece se for admin) -->
+        <router-link 
+          v-if="isAuthenticated && isAdmin" 
+          to="/admin" 
+          class="nav-link admin-link"
+        >
+          <i class="pi pi-shield"></i>
+          Admin
+        </router-link>
       </div>
       
       <!-- Search Bar -->
@@ -57,7 +66,7 @@
                 <div class="user-details">
                   <p class="user-name">{{ user?.name }}</p>
                   <p class="user-email">{{ user?.email }}</p>
-                  <p class="user-role" v-if="user?.role === 'admin'">Administrador</p>
+                  <p class="user-role" v-if="isAdmin">Administrador</p>
                 </div>
               </div>
               
@@ -72,6 +81,20 @@
               </div>
               
               <div class="dropdown-divider"></div>
+              
+              <!-- Admin Panel no dropdown (só para admin) -->
+              <router-link 
+                v-if="isAuthenticated && isAdmin" 
+                to="/admin" 
+                class="dropdown-item admin-dropdown-item"
+                @click="closeUserMenu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L15 8H22L16 12L19 18L12 14L5 18L8 12L2 8H9L12 2Z" fill="currentColor"/>
+                </svg>
+                Painel Admin
+                <span class="admin-badge">ADMIN</span>
+              </router-link>
               
               <router-link to="/profile" class="dropdown-item" v-if="isAuthenticated">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -150,6 +173,11 @@ const totalFavorites = computed(() => favoritesStore.totalFavorites)
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const user = computed(() => authStore.user)
 const loading = computed(() => authStore.isLoading)
+
+// Verificar se é administrador
+const isAdmin = computed(() => {
+  return user.value?.role === 'admin'
+})
 
 // Computed: iniciais do usuário
 const userInitials = computed(() => {
@@ -265,6 +293,7 @@ onMounted(() => {
 .nav-links {
   display: flex;
   gap: 2rem;
+  align-items: center;
 }
 
 .nav-link {
@@ -272,11 +301,31 @@ onMounted(() => {
   color: var(--white-soft);
   font-weight: 500;
   transition: color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .nav-link:hover,
 .nav-link.router-link-active {
   color: var(--gold-primary);
+}
+
+/* Admin link estilo especial */
+.admin-link {
+  background: rgba(212, 175, 55, 0.1);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.admin-link i {
+  font-size: 0.9rem;
+}
+
+.admin-link:hover {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--gold-primary);
 }
 
 .nav-icons {
@@ -446,6 +495,22 @@ onMounted(() => {
   border-radius: 20px;
   font-size: 0.7rem;
   color: var(--gold-primary);
+}
+
+/* Admin dropdown item */
+.admin-dropdown-item {
+  border-left: 3px solid var(--gold-primary);
+  background: rgba(212, 175, 55, 0.05);
+}
+
+.admin-badge {
+  margin-left: auto;
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #b58f2a 100%);
+  color: var(--black-primary);
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: bold;
 }
 
 .logout-btn {

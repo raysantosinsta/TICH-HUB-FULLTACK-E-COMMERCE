@@ -4,6 +4,25 @@ import { useAuthStore } from '../stores/auth';
 // Configurações da API
 const API_BASE_URL = 'https://fakestoreapi.com';
 
+// Flag para evitar múltiplas tentativas de refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: unknown) => void;
+  reject: (reason?: any) => void;
+}> = [];
+
+// Processar fila de requisições
+const processQueue = (error: Error | null, token: string | null = null) => {
+  failedQueue.forEach(promise => {
+    if (error) {
+      promise.reject(error);
+    } else {
+      promise.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 // Criar instância do axios
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -37,15 +56,77 @@ axiosInstance.interceptors.response.use(
   },
   async (error: AxiosError) => {
     const authStore = useAuthStore();
+    const originalRequest = error.config as any;
     
-    // Se for erro 401 (Não autorizado), fazer logout
-    if (error.response?.status === 401) {
-      console.log('Token expirado ou inválido. Fazendo logout...');
-      authStore.logout();
+    // Se for erro 401 (Não autorizado) e não for uma tentativa de refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      console.log('Token expirado ou inválido.');
       
-      // Redirecionar para página de login se não estiver nela
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      // Se já estiver tentando refresh, adicionar à fila
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return axiosInstance(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+      
+      originalRequest._retry = true;
+      isRefreshing = true;
+      
+      try {
+        // Tentar renovar o token (simulado)
+        // Em um cenário real, você chamaria um endpoint de refresh token
+        const refreshToken = localStorage.getItem('refresh_token');
+        
+        if (refreshToken) {
+          // Simular refresh token
+          // const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+          // const newToken = response.data.token;
+          
+          // Simulação de novo token
+          const newToken = btoa(`user:${Date.now()}`);
+          
+          // Atualizar token no store
+          // authStore.updateToken?.(newToken); // Se tiver método updateToken
+          localStorage.setItem('auth_token', newToken);
+          
+          // Processar fila de requisições
+          processQueue(null, newToken);
+          
+          // Repetir a requisição original com o novo token
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return axiosInstance(originalRequest);
+        } else {
+          throw new Error('No refresh token available');
+        }
+      } catch (refreshError) {
+        // Se falhar ao renovar, fazer logout
+        console.log('Falha ao renovar token. Fazendo logout...');
+        processQueue(refreshError as Error, null);
+        authStore.logout();
+        
+        // Redirecionar para página de login
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+    
+    // Se for erro 403 (Proibido - sem permissão)
+    if (error.response?.status === 403) {
+      console.log('Acesso negado. Você não tem permissão para esta ação.');
+      
+      // Opcional: redirecionar para página de acesso negado
+      if (window.location.pathname !== '/forbidden' && window.location.pathname !== '/login') {
+        window.location.href = '/forbidden';
       }
     }
     
@@ -65,6 +146,7 @@ export interface Product {
     rate: number;
     count: number;
   };
+  discount?: number;
 }
 
 export interface Category {
@@ -78,6 +160,13 @@ export interface LoginCredentials {
 
 export interface LoginResponse {
   token: string;
+  refreshToken?: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
 }
 
 // API Service
@@ -143,19 +232,42 @@ export const api = {
     }
   },
 
-  // Autenticação (simulada com FakeStoreAPI)
+  // Autenticação
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
       // FakeStoreAPI não tem endpoint de login real
       // Simulando um login que retorna um token
       const mockToken = btoa(`${credentials.username}:${Date.now()}`);
+      const mockRefreshToken = btoa(`refresh:${credentials.username}:${Date.now()}`);
       
       // Simular delay de rede
       await new Promise(resolve => setTimeout(resolve, 800));
       
       // Validar credenciais simuladas
       if (credentials.username === 'user@test.com' && credentials.password === '123456') {
-        return { token: mockToken };
+        return { 
+          token: mockToken,
+          refreshToken: mockRefreshToken,
+          user: {
+            id: 1,
+            name: 'Usuário Teste',
+            email: credentials.username,
+            role: 'user'
+          }
+        };
+      }
+      
+      if (credentials.username === 'admin@test.com' && credentials.password === 'admin123') {
+        return { 
+          token: mockToken,
+          refreshToken: mockRefreshToken,
+          user: {
+            id: 2,
+            name: 'Administrador',
+            email: credentials.username,
+            role: 'admin'
+          }
+        };
       }
       
       throw new Error('Credenciais inválidas');
@@ -165,10 +277,27 @@ export const api = {
     }
   },
 
-  // Carrinho (simulado)
+  // Refresh token (simulado)
+  async refreshToken(refreshToken: string): Promise<LoginResponse> {
+    try {
+      // Simular refresh token
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const newToken = btoa(`refreshed:${Date.now()}`);
+      
+      return {
+        token: newToken,
+        refreshToken: btoa(`refresh:${Date.now()}`)
+      };
+    } catch (error) {
+      console.error('Erro ao renovar token:', error);
+      throw error;
+    }
+  },
+
+  // Carrinho
   async getCart(userId: number): Promise<any> {
     try {
-      // FakeStoreAPI tem endpoint de carrinho
       const response = await axiosInstance.get(`/carts/user/${userId}`);
       return response.data;
     } catch (error) {
@@ -238,7 +367,7 @@ export const api = {
     }
   },
 
-  // Método para fazer upload de imagens (simulado)
+  // Upload de imagens (simulado)
   async uploadImage(file: File): Promise<{ url: string }> {
     try {
       const formData = new FormData();
@@ -271,6 +400,12 @@ export const handleApiError = (error: any): string => {
     }
     if (error.response?.status === 500) {
       return 'Erro no servidor. Tente novamente mais tarde.';
+    }
+    if (error.code === 'ECONNABORTED') {
+      return 'Tempo limite excedido. Verifique sua conexão.';
+    }
+    if (error.code === 'ERR_NETWORK') {
+      return 'Erro de rede. Verifique sua conexão com a internet.';
     }
     return error.response?.data?.message || 'Erro na requisição. Tente novamente.';
   }

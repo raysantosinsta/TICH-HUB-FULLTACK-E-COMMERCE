@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '@/layouts/MainLayout.vue'
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import { useAuthStore } from '@/stores/auth'
+import { setupRouterGuards } from './guards'
 
 // Importações das views
 import HomePage from '../views/HomePage.vue'
@@ -93,6 +93,17 @@ const router = createRouter({
             title: 'Meus Pedidos - ShopHub',
             requiresAuth: true
           }
+        },
+        // Exemplo de rota com role específica (apenas admin)
+        {
+          path: 'admin',
+          name: 'admin',
+          component: () => import('../views/admin/DashboardView.vue'),
+          meta: {
+            title: 'Admin - ShopHub',
+            requiresAuth: true,
+            role: 'admin'
+          }
         }
       ]
     },
@@ -135,83 +146,13 @@ const router = createRouter({
   ]
 })
 
-// Guardião de rotas principal
-router.beforeEach(async (to, from, next) => {
-  // Carregar store de autenticação
-  const authStore = useAuthStore()
-  
-  // Garantir que o usuário está carregado
-  if (!authStore.isAuthenticated && !authStore.loading) {
-    authStore.loadUser()
-  }
-  
-  // Aguardar um pouco para o carregamento
-  if (authStore.loading) {
-    // Aguardar até 1 segundo para o carregamento
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-  
-  const isAuthenticated = authStore.isAuthenticated
-  const requiresAuth = to.meta.requiresAuth as boolean
-  const guestOnly = to.meta.guestOnly as boolean
-  
-  // Log para debug (remover em produção)
-  console.log(`Navegando para: ${to.path}`, {
-    isAuthenticated,
-    requiresAuth,
-    guestOnly,
-    token: authStore.getToken() ? 'presente' : 'ausente'
-  })
-  
-  // Atualizar título da página
-  if (to.meta.title) {
-    document.title = to.meta.title as string
-  }
-  
-  // Se a rota requer autenticação e usuário não está logado
-  if (requiresAuth && !isAuthenticated) {
-    // Salvar a rota que o usuário tentou acessar para redirecionar após login
-    next({
-      path: '/login',
-      query: { redirect: to.fullPath }
-    })
-    return
-  }
-  
-  // Se a rota é apenas para visitantes (login/register) e usuário já está logado
-  if (guestOnly && isAuthenticated) {
-    // Redirecionar para a página inicial
-    next('/')
-    return
-  }
-  
-  // Se tudo estiver ok, prosseguir
-  next()
-})
-
-// Guardião de rotas pós-navegação (para analytics, etc)
-router.afterEach((to, from) => {
-  // Log de navegação (remover em produção)
-  console.log(`Navegação concluída: de ${from.path} para ${to.path}`)
-  
-  // Scroll para o topo ao mudar de página
-  if (to.hash) {
-    // Se tem hash, rolar para o elemento específico
-    const element = document.querySelector(to.hash)
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' })
-    }
-  } else {
-    // Caso contrário, rolar para o topo
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-})
+// Configurar todos os guards
+setupRouterGuards(router)
 
 // Tratamento de erros de navegação
 router.onError((error) => {
   console.error('Erro na navegação:', error)
   
-  // Tratar erro de carregamento de componente
   if (error.message.includes('Failed to fetch dynamically imported module')) {
     console.warn('Falha ao carregar componente. Tentando recarregar...')
     window.location.reload()
