@@ -17,12 +17,19 @@
         <p class="favorites-count">{{ totalFavorites }} produto(s) favoritado(s)</p>
       </div>
 
-      <!-- Lista de Favoritos -->
-      <div v-if="favorites.length > 0" class="favorites-list">
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Carregando seus favoritos...</p>
+      </div>
+
+      <!-- Lista de Favoritos (apenas quando autenticado) -->
+      <div v-else-if="isAuthenticated && favorites.length > 0" class="favorites-list">
         <FavoriteItem 
           v-for="product in favorites" 
           :key="product.id"
           :product="product"
+          @remove="handleRemoveFavorite"
         />
         
         <div class="actions-footer">
@@ -35,15 +42,15 @@
         </div>
       </div>
 
-      <!-- Estado Vazio -->
-      <div v-else class="empty-favorites">
+      <!-- Estado Vazio (autenticado mas sem favoritos) -->
+      <div v-else-if="isAuthenticated && favorites.length === 0 && !loading" class="empty-favorites">
         <div class="empty-content">
           <svg class="empty-icon" width="120" height="120" viewBox="0 0 24 24" fill="none">
             <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
           </svg>
           <h2>Você ainda não tem produtos favoritos</h2>
           <p>Comece adicionando produtos que você gosta ❤️</p>
-          <router-link to="/" class="explore-btn">
+          <router-link to="/products" class="explore-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
@@ -51,28 +58,83 @@
           </router-link>
         </div>
       </div>
+
+      <!-- Estado Não Autenticado -->
+      <div v-else-if="!isAuthenticated" class="login-prompt">
+        <div class="login-prompt-content">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
+            <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+          </svg>
+          <h2>Faça login para ver seus favoritos</h2>
+          <p>Entre com sua conta para acessar seus produtos favoritos</p>
+          <div class="login-buttons">
+            <router-link to="/login" class="btn btn-primary">Entrar</router-link>
+            <router-link to="/register" class="btn btn-outline">Criar conta</router-link>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavoritesStore } from '../stores/favorites'
+import { useAuthStore } from '../stores/auth'
 import { useToast } from '../plugins/toast'
 import { useConfirm } from '../plugins/confirm'
 import FavoriteItem from '../components/FavoriteItem.vue'
 
 const router = useRouter()
 const favoritesStore = useFavoritesStore()
+const authStore = useAuthStore()
 const toast = useToast()
 const { confirm } = useConfirm()
 
+// Computed properties
 const favorites = computed(() => favoritesStore.favorites)
 const totalFavorites = computed(() => favoritesStore.totalFavorites)
+const loading = computed(() => favoritesStore.loading)
+const isAuthenticated = computed(() => authStore.isAuthenticated)
+const currentUser = computed(() => authStore.user)
 
+// Observar mudanças na autenticação
+watch(() => authStore.isAuthenticated, (newValue) => {
+  if (newValue) {
+    // Usuário fez login, carregar favoritos
+    favoritesStore.syncWithUser()
+  } else {
+    // Usuário fez logout, limpar lista
+    favoritesStore.syncWithUser()
+  }
+})
+
+// Observar mudanças no ID do usuário
+watch(() => authStore.user?.id, () => {
+  if (authStore.isAuthenticated) {
+    favoritesStore.syncWithUser()
+  }
+})
+
+// Remover um favorito específico
+const handleRemoveFavorite = (productId: number) => {
+  // O FavoriteItem já chama o removeFromFavorites
+  // Aqui apenas mostramos um toast adicional se necessário
+  toast.info(
+    'Favorito removido', 
+    'Produto removido dos seus favoritos.', 
+    2000
+  )
+}
+
+// Limpar todos os favoritos
 const clearAllFavorites = async () => {
-  console.log('clearAllFavorites called') // Debug
+  if (!isAuthenticated.value) {
+    toast.warning('Acesso negado', 'Faça login para gerenciar seus favoritos.', 3000)
+    router.push('/login')
+    return
+  }
   
   const result = await confirm({
     title: 'Limpar favoritos',
@@ -82,28 +144,32 @@ const clearAllFavorites = async () => {
     type: 'danger'
   })
   
-  console.log('Confirm result:', result) // Debug
-  
   if (result) {
-    console.log('Clearing favorites...') // Debug
     favoritesStore.clearFavorites()
-    console.log('Favorites after clear:', favoritesStore.favorites.value) // Debug
-    toast.info(
+    toast.success(
       'Favoritos limpos', 
-      'Todos os produtos foram removidos dos favoritos.', 
+      'Todos os produtos foram removidos dos seus favoritos.', 
       3000
     )
   }
 }
 
+// Recarregar favoritos manualmente
+const refreshFavorites = () => {
+  if (isAuthenticated.value) {
+    favoritesStore.loadFavorites()
+  }
+}
+
 onMounted(() => {
-  favoritesStore.loadFavorites()
-  console.log('Favorites loaded:', favoritesStore.favorites.value) // Debug
+  // Se estiver autenticado, carregar favoritos
+  if (isAuthenticated.value) {
+    favoritesStore.syncWithUser()
+  }
 })
 </script>
 
 <style scoped>
-/* Seus estilos existentes... */
 .favorites-page {
   position: relative;
   min-height: 100vh;
@@ -187,6 +253,35 @@ onMounted(() => {
   font-size: 1rem;
 }
 
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 20px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(212, 175, 55, 0.2);
+  border-top-color: var(--gold-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  color: rgba(245, 240, 230, 0.7);
+  font-size: 1rem;
+}
+
+/* Favorites List */
 .favorites-list {
   display: flex;
   flex-direction: column;
@@ -218,8 +313,10 @@ onMounted(() => {
 .clear-all-btn:hover {
   background: rgba(255, 107, 107, 0.1);
   transform: translateY(-2px);
+  border-color: #ff6b6b;
 }
 
+/* Empty State */
 .empty-favorites {
   display: flex;
   justify-content: center;
@@ -266,6 +363,82 @@ onMounted(() => {
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
 }
 
+/* Login Prompt */
+.login-prompt {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 500px;
+  text-align: center;
+}
+
+.login-prompt-content {
+  max-width: 400px;
+  padding: 48px 32px;
+  background: rgba(11, 11, 15, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 32px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  animation: fadeInUp 0.5s ease;
+}
+
+.login-prompt-content svg {
+  color: var(--gold-primary);
+  margin-bottom: 24px;
+}
+
+.login-prompt-content h2 {
+  color: var(--white-soft);
+  font-size: 1.5rem;
+  margin-bottom: 12px;
+}
+
+.login-prompt-content p {
+  color: rgba(245, 240, 230, 0.6);
+  margin-bottom: 32px;
+}
+
+.login-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #b58f2a 100%);
+  color: var(--black-primary);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+}
+
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--gold-primary);
+  color: var(--gold-primary);
+}
+
+.btn-outline:hover {
+  background: rgba(212, 175, 55, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -277,6 +450,7 @@ onMounted(() => {
   }
 }
 
+/* Responsividade */
 @media (max-width: 768px) {
   .container {
     padding: 0 16px;
@@ -292,6 +466,19 @@ onMounted(() => {
   
   .actions-footer {
     justify-content: center;
+  }
+  
+  .login-prompt-content {
+    padding: 32px 24px;
+    margin: 0 16px;
+  }
+  
+  .login-buttons {
+    flex-direction: column;
+  }
+  
+  .btn {
+    width: 100%;
   }
 }
 </style>

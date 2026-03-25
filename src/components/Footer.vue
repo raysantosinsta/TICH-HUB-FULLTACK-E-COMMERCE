@@ -43,11 +43,12 @@
 </script>
 
 <style scoped>
+/* Estilos específicos do footer - sem duplicação de variáveis globais */
 .footer {
   background-color: var(--dark-color);
-  color: var(--white);
   margin-top: 50px;
   padding: 40px 0 20px;
+  border-top: 1px solid rgba(212, 175, 55, 0.1);
 }
 
 .footer-content {
@@ -60,25 +61,38 @@
 .footer-section h3,
 .footer-section h4 {
   margin-bottom: 15px;
-  color: var(--primary-color);
+  color: var(--gold-primary);
+}
+
+.footer-section h3 {
+  font-size: 1.5rem;
+}
+
+.footer-section h4 {
+  font-size: 1.1rem;
 }
 
 .footer-section ul {
   list-style: none;
+  padding: 0;
 }
 
 .footer-section ul li {
   margin-bottom: 8px;
+  color: var(--white-soft);
+  opacity: 0.8;
 }
 
 .footer-section a {
-  color: var(--white);
+  color: var(--white-soft);
   text-decoration: none;
-  transition: color 0.3s;
+  transition: all 0.3s ease;
 }
 
 .footer-section a:hover {
-  color: var(--primary-color);
+  color: var(--gold-primary);
+  transform: translateX(5px);
+  display: inline-block;
 }
 
 .social-links {
@@ -89,18 +103,62 @@
 .social-links a {
   font-size: 1.5rem;
   text-decoration: none;
-  color: var(--white);
-  transition: transform 0.3s;
+  color: var(--white-soft);
+  transition: all 0.3s ease;
+  display: inline-block;
 }
 
 .social-links a:hover {
   transform: translateY(-3px);
-  color: var(--primary-color);
+  color: var(--gold-primary);
 }
 
 .footer-bottom {
   text-align: center;
   padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(212, 175, 55, 0.1);
+  color: var(--white-soft);
+  opacity: 0.7;
+  font-size: 0.9rem;
+}
+
+/* Responsividade específica do footer */
+@media (max-width: 768px) {
+  .footer {
+    margin-top: 40px;
+    padding: 30px 0 15px;
+  }
+  
+  .footer-content {
+    gap: 25px;
+  }
+  
+  .footer-section h3 {
+    font-size: 1.3rem;
+  }
+  
+  .footer-section h4 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .footer {
+    margin-top: 30px;
+    padding: 25px 0 15px;
+  }
+  
+  .footer-content {
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .social-links {
+    justify-content: center;
+  }
+  
+  .footer-section a:hover {
+    transform: translateX(0);
+  }
 }
 </style>

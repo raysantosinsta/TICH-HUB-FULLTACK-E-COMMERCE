@@ -8,8 +8,6 @@
       <div class="nav-links">
         <router-link to="/" class="nav-link">Home</router-link>
         <router-link to="/products" class="nav-link">Produtos</router-link>
-        <!-- <a href="#" class="nav-link">Categorias</a> -->
-        <!-- <a href="#" class="nav-link">Contato</a> -->
       </div>
       
       <!-- Search Bar -->
@@ -17,7 +15,12 @@
       
       <div class="nav-icons">
         <!-- Ícone de Favoritos -->
-        <router-link to="/favorites" class="icon-btn favorites-btn" aria-label="Favoritos">
+        <router-link 
+          v-if="isAuthenticated"
+          to="/favorites" 
+          class="icon-btn favorites-btn" 
+          aria-label="Favoritos"
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z" fill="currentColor"/>
           </svg>
@@ -49,6 +52,7 @@
                 <div class="user-details">
                   <p class="user-name">{{ user?.name }}</p>
                   <p class="user-email">{{ user?.email }}</p>
+                  <p class="user-role" v-if="user?.role === 'admin'">Administrador</p>
                 </div>
               </div>
               
@@ -79,7 +83,7 @@
                 Meus Pedidos
               </router-link>
               
-              <router-link to="/favorites" class="dropdown-item">
+              <router-link to="/favorites" class="dropdown-item" v-if="isAuthenticated">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z" fill="currentColor"/>
                 </svg>
@@ -119,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCartStore } from '../stores/cart'
 import { useFavoritesStore } from '../stores/favorites'
@@ -135,11 +139,14 @@ const toast = useToast()
 
 const showUserMenu = ref(false)
 
+// Computed properties
 const cartTotalItems = computed(() => cartStore.totalItems)
 const totalFavorites = computed(() => favoritesStore.totalFavorites)
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 const user = computed(() => authStore.user)
+const loading = computed(() => authStore.isLoading)
 
+// Computed: iniciais do usuário
 const userInitials = computed(() => {
   if (!user.value) return ''
   return user.value.name
@@ -150,6 +157,7 @@ const userInitials = computed(() => {
     .slice(0, 2)
 })
 
+// Methods
 const goHome = () => {
   router.push('/')
 }
@@ -169,7 +177,26 @@ const handleLogout = () => {
   router.push('/')
 }
 
-// Fechar menu ao clicar fora
+// Observar mudanças na autenticação para sincronizar favoritos
+watch(() => authStore.isAuthenticated, (newValue, oldValue) => {
+  if (newValue) {
+    // Usuário acabou de fazer login - carregar favoritos do usuário
+    favoritesStore.syncWithUser()
+    cartStore.loadCart()
+  } else if (oldValue && !newValue) {
+    // Usuário acabou de fazer logout - limpar dados locais
+    favoritesStore.syncWithUser()
+  }
+})
+
+// Observar mudanças no ID do usuário
+watch(() => authStore.user?.id, () => {
+  if (authStore.isAuthenticated) {
+    favoritesStore.syncWithUser()
+  }
+})
+
+// Diretiva para fechar menu ao clicar fora
 const vClickOutside = {
   mounted(el: HTMLElement, binding: any) {
     el.clickOutsideEvent = (event: MouseEvent) => {
@@ -184,9 +211,16 @@ const vClickOutside = {
   }
 }
 
+// Lifecycle
 onMounted(() => {
+  // Carregar dados iniciais
   authStore.loadUser()
-  favoritesStore.loadFavorites()
+  
+  // Se já estiver autenticado, carregar favoritos
+  if (authStore.isAuthenticated) {
+    favoritesStore.syncWithUser()
+  }
+  
   cartStore.loadCart()
 })
 </script>
@@ -216,6 +250,10 @@ onMounted(() => {
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+.logo h1:hover {
+  transform: scale(1.05);
 }
 
 .nav-links {
@@ -355,6 +393,13 @@ onMounted(() => {
 .user-email {
   color: rgba(245, 240, 230, 0.5);
   font-size: 0.75rem;
+}
+
+.user-role {
+  color: var(--gold-primary);
+  font-size: 0.7rem;
+  margin-top: 2px;
+  font-weight: 500;
 }
 
 .dropdown-divider {

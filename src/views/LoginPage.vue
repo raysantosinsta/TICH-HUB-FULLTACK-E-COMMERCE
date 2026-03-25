@@ -33,6 +33,7 @@
                 placeholder="Digite seu e-mail"
                 required
                 autocomplete="email"
+                :disabled="loading"
               />
             </div>
           </div>
@@ -52,8 +53,14 @@
                 placeholder="Digite sua senha"
                 required
                 autocomplete="current-password"
+                :disabled="loading"
               />
-              <button type="button" class="toggle-password" @click="showPassword = !showPassword">
+              <button 
+                type="button" 
+                class="toggle-password" 
+                @click="showPassword = !showPassword"
+                :disabled="loading"
+              >
                 <svg v-if="!showPassword" width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="currentColor" stroke-width="1.5"/>
                   <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
@@ -68,10 +75,10 @@
 
           <div class="form-options">
             <label class="checkbox-label">
-              <input type="checkbox" v-model="rememberMe">
+              <input type="checkbox" v-model="rememberMe" :disabled="loading">
               <span>Lembrar-me</span>
             </label>
-            <a href="#" class="forgot-password">Esqueceu a senha?</a>
+            <a href="#" class="forgot-password" @click.prevent="handleForgotPassword">Esqueceu a senha?</a>
           </div>
 
           <button type="submit" class="login-btn" :disabled="loading">
@@ -90,6 +97,7 @@
         <div class="login-footer">
           <p>Credenciais de teste:</p>
           <code>user@test.com / 123456</code>
+          <code style="margin-top: 8px; display: block;">admin@test.com / admin123</code>
         </div>
 
         <div class="register-link">
@@ -101,15 +109,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from '../plugins/toast'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const toast = useToast()
 
+// Form data
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
@@ -117,21 +127,83 @@ const rememberMe = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
 
+// Verificar se já está logado
+onMounted(() => {
+  if (authStore.isAuthenticated) {
+    // Se já estiver logado, redirecionar para a página inicial ou para a página que tentou acessar
+    const redirectTo = route.query.redirect as string || '/'
+    router.push(redirectTo)
+  }
+  
+  // Preencher email se tiver no localStorage (lembrar-me)
+  const savedEmail = localStorage.getItem('remembered_email')
+  if (savedEmail) {
+    email.value = savedEmail
+    rememberMe.value = true
+  }
+})
+
 const handleLogin = async () => {
+  // Validação básica
+  if (!email.value || !password.value) {
+    errorMessage.value = 'Por favor, preencha todos os campos'
+    return
+  }
+  
   loading.value = true
   errorMessage.value = ''
   
-  const result = await authStore.login(email.value, password.value)
-  
-  loading.value = false
-  
-  if (result.success) {
-    toast.success('Login realizado!', 'Bem-vindo de volta ao ShopHub.', 3000)
-    router.push('/')
-  } else {
-    errorMessage.value = result.message || 'Email ou senha inválidos'
+  try {
+    const result = await authStore.login(email.value, password.value)
+    
+    if (result.success) {
+      // Salvar email se "lembrar-me" estiver marcado
+      if (rememberMe.value) {
+        localStorage.setItem('remembered_email', email.value)
+      } else {
+        localStorage.removeItem('remembered_email')
+      }
+      
+      toast.success('Login realizado!', 'Bem-vindo de volta ao ShopHub.', 3000)
+      
+      // Redirecionar para a página que tentou acessar ou home
+      const redirectTo = route.query.redirect as string || '/'
+      router.push(redirectTo)
+    } else {
+      errorMessage.value = result.message || 'Email ou senha inválidos'
+      
+      // Mostrar toast de erro também
+      toast.error('Erro no login', errorMessage.value, 3000)
+    }
+  } catch (error) {
+    console.error('Erro no login:', error)
+    errorMessage.value = 'Erro ao conectar com o servidor. Tente novamente.'
+    toast.error('Erro', errorMessage.value, 3000)
+  } finally {
+    loading.value = false
   }
 }
+
+const handleForgotPassword = () => {
+  toast.info(
+    'Recuperar senha', 
+    'Funcionalidade em desenvolvimento. Em breve você poderá recuperar sua senha.', 
+    3000
+  )
+}
+
+// Limpar mensagem de erro quando o usuário começar a digitar
+const clearError = () => {
+  if (errorMessage.value) {
+    errorMessage.value = ''
+  }
+}
+
+// Watch para limpar erro quando os campos mudam
+import { watch } from 'vue'
+watch([email, password], () => {
+  clearError()
+})
 </script>
 
 <style scoped>
@@ -269,6 +341,7 @@ const handleLogin = async () => {
   position: absolute;
   left: 14px;
   color: rgba(245, 240, 230, 0.4);
+  pointer-events: none;
 }
 
 .input-wrapper input {
@@ -288,6 +361,11 @@ const handleLogin = async () => {
   background: rgba(59, 58, 64, 0.5);
 }
 
+.input-wrapper input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .toggle-password {
   position: absolute;
   right: 14px;
@@ -299,10 +377,16 @@ const handleLogin = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 4px;
 }
 
-.toggle-password:hover {
+.toggle-password:hover:not(:disabled) {
   color: var(--gold-primary);
+}
+
+.toggle-password:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .form-options {
@@ -327,14 +411,21 @@ const handleLogin = async () => {
   accent-color: var(--gold-primary);
 }
 
+.checkbox-label input:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .forgot-password {
   color: var(--gold-primary);
   text-decoration: none;
   transition: color 0.3s;
+  cursor: pointer;
 }
 
 .forgot-password:hover {
   color: #e6bc3e;
+  text-decoration: underline;
 }
 
 .login-btn {
@@ -385,6 +476,13 @@ const handleLogin = async () => {
   color: #ff6b6b;
   font-size: 0.85rem;
   margin-top: 8px;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
 }
 
 .login-footer {
@@ -406,6 +504,7 @@ const handleLogin = async () => {
   border-radius: 20px;
   color: var(--gold-primary);
   font-size: 0.8rem;
+  display: inline-block;
 }
 
 .register-link {

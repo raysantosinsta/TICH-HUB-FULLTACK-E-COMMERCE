@@ -56,12 +56,6 @@ body {
   line-height: 1.6;
 }
 
-#app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
 /* Container responsivo */
 .container {
   max-width: 1280px;
