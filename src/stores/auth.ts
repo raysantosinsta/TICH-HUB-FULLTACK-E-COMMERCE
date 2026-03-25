@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import authService, { type LoginResponse, type RegisterData, verifyToken } from '../services/auth.service'
+import { computed, ref } from 'vue'
+import authService, { verifyToken } from '../services/auth.service'
 
 export interface User {
   id: number

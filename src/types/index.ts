@@ -11,6 +11,7 @@ export interface Product {
   category: string;
   image: string;
   rating: Rating;
+  discount: number
 }
 
 export interface ProductsState {
@@ -18,4 +19,6 @@ export interface ProductsState {
   loading: boolean;
   error: string | null;
 }
+
+
 

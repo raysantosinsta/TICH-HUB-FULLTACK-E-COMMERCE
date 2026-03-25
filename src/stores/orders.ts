@@ -1,67 +1,47 @@
-import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
-import { useAuthStore } from './auth'
-import type { Product } from '../types'
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
+import { Order } from "../models/order.model";
+import { useAuthStore } from "./auth";
 
-export interface OrderItem {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  image: string
-  category?: string
-}
-
-export interface Order {
-  id: string
-  date: string
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-  total: number
-  subtotal: number
-  shipping: number
-  discount: number
-  products: OrderItem[]
-  paymentMethod?: string
-  trackingCode?: string
-}
-
-export const useOrdersStore = defineStore('orders', () => {
-  const orders = ref<Order[]>([])
-  const authStore = useAuthStore()
+export const useOrdersStore = defineStore("orders", () => {
+  const orders = ref<Order[]>([]);
+  const authStore = useAuthStore();
 
   // Obter chave do localStorage baseada no usuário
   const getStorageKey = () => {
-    const userId = authStore.user?.id
-    if (!userId) return null
-    return `orders_user_${userId}`
-  }
+    const userId = authStore.user?.id;
+    if (!userId) return null;
+    return `orders_user_${userId}`;
+  };
 
   // Carregar pedidos do localStorage do usuário
   const loadOrders = () => {
-    const storageKey = getStorageKey()
+    const storageKey = getStorageKey();
     if (!storageKey) {
-      orders.value = []
-      return
+      orders.value = [];
+      return;
     }
 
-    const savedOrders = localStorage.getItem(storageKey)
+    const savedOrders = localStorage.getItem(storageKey);
     if (savedOrders) {
-      orders.value = JSON.parse(savedOrders)
+      const data = JSON.parse(savedOrders);
+      orders.value = data.map((orderData: any) => Order.fromJSON(orderData));
+      orders.value.sort((a, b) => b.date.getTime() - a.date.getTime());
     } else {
-      orders.value = []
+      orders.value = [];
     }
-  }
+  };
 
   // Salvar pedidos no localStorage do usuário
   const saveOrders = () => {
-    const storageKey = getStorageKey()
-    if (!storageKey) return
-    localStorage.setItem(storageKey, JSON.stringify(orders.value))
-  }
+    const storageKey = getStorageKey();
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, JSON.stringify(orders.value.map(o => o.toJSON())));
+  };
 
   // Criar novo pedido
   const createOrder = (
-    products: OrderItem[],
+    cartItems: { product: any; quantity: number }[],
     subtotal: number,
     shipping: number,
     discount: number,
@@ -69,88 +49,81 @@ export const useOrdersStore = defineStore('orders', () => {
   ): Order | null => {
     // Verificar se usuário está logado
     if (!authStore.isAuthenticated) {
-      console.warn('Tentativa de criar pedido sem usuário logado')
-      return null
+      console.warn("Tentativa de criar pedido sem usuário logado");
+      return null;
     }
 
-    const now = new Date()
-    const orderId = `ORD-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(orders.value.length + 1).padStart(4, '0')}`
-
-    const newOrder: Order = {
-      id: orderId,
-      date: now.toISOString(),
-      status: 'processing',
-      total,
+    // Criar pedido usando a classe Order
+    const newOrder = Order.createFromCart(
+      cartItems,
       subtotal,
       shipping,
       discount,
-      products,
-      trackingCode: `BR${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-    }
+      total,
+      authStore.user?.id
+    );
 
-    orders.value.unshift(newOrder) // Adicionar no início do array
-    saveOrders()
-    return newOrder
-  }
+    orders.value.unshift(newOrder); // Adicionar no início do array
+    saveOrders();
+    return newOrder;
+  };
 
   // Atualizar status do pedido
   const updateOrderStatus = (orderId: string, status: Order['status']) => {
-    const order = orders.value.find(o => o.id === orderId)
+    const order = orders.value.find((o) => o.id === orderId);
     if (order) {
-      order.status = status
-      saveOrders()
+      order.updateStatus(status);
+      saveOrders();
     }
-  }
+  };
 
   // Obter pedido por ID
   const getOrderById = (orderId: string): Order | undefined => {
-    return orders.value.find(o => o.id === orderId)
-  }
+    return orders.value.find((o) => o.id === orderId);
+  };
 
   // Limpar pedidos do usuário (útil para logout)
   const clearOrders = () => {
-    orders.value = []
-    const storageKey = getStorageKey()
+    orders.value = [];
+    const storageKey = getStorageKey();
     if (storageKey) {
-      localStorage.removeItem(storageKey)
+      localStorage.removeItem(storageKey);
     }
-  }
+  };
 
   // Sincronizar com o usuário atual
   const syncWithUser = () => {
     if (authStore.isAuthenticated) {
-      loadOrders()
+      loadOrders();
     } else {
-      orders.value = []
+      orders.value = [];
     }
-  }
+  };
 
   // Contagem de pedidos
-  const totalOrders = computed(() => orders.value.length)
+  const totalOrders = computed(() => orders.value.length);
 
-  // Status do pedido para exibição
+  // Status do pedido para exibição (mantido para compatibilidade)
   const getStatusBadge = (status: Order['status']) => {
-    const badges = {
-      pending: { text: 'Aguardando pagamento', color: '#ffc107', bg: 'rgba(255, 193, 7, 0.1)' },
-      processing: { text: 'Processando', color: '#2196f3', bg: 'rgba(33, 150, 243, 0.1)' },
-      shipped: { text: 'Enviado', color: '#4caf50', bg: 'rgba(76, 175, 80, 0.1)' },
-      delivered: { text: 'Entregue', color: '#9c27b0', bg: 'rgba(156, 39, 176, 0.1)' },
-      cancelled: { text: 'Cancelado', color: '#ff6b6b', bg: 'rgba(255, 107, 107, 0.1)' }
-    }
-    return badges[status]
-  }
+    const order = new Order('', new Date(), status, 0, 0, 0, 0, []);
+    return {
+      text: order.getStatusText(),
+      color: order.getStatusColor(),
+      bg: order.getStatusBg()
+    };
+  };
 
-  // Formatar data
+  // Formatar data (mantido para compatibilidade)
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
+    const date = new Date(dateString);
+    return date.toLocaleDateString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   return {
     orders,
@@ -162,6 +135,6 @@ export const useOrdersStore = defineStore('orders', () => {
     getStatusBadge,
     formatDate,
     clearOrders,
-    syncWithUser
-  }
-})
+    syncWithUser,
+  };
+});

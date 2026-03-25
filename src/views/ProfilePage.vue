@@ -205,25 +205,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useOrdersStore } from '../stores/orders'  // Adicionar import
 import { useToast } from '../plugins/toast'
 import { useConfirm } from '../plugins/confirm'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const ordersStore = useOrdersStore()  // Adicionar store de pedidos
 const toast = useToast()
 const { confirm } = useConfirm()
 
 // Estado
 const loading = ref(true)
 const showEditModal = ref(false)
-const orders = ref<any[]>([])
 const editForm = ref({
   name: '',
   email: ''
 })
+
+// Computed - usar o store de pedidos
+const orders = computed(() => ordersStore.orders)
+const totalOrders = computed(() => ordersStore.totalOrders)
 
 // Computed
 const user = computed(() => authStore.user)
@@ -247,13 +252,7 @@ const formatPrice = (price: number) => {
 
 // Formatar data
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  return ordersStore.formatDate(dateString)
 }
 
 // Formatar categoria
@@ -287,19 +286,8 @@ const getStatusStep = (step: string, currentStatus: string) => {
   return stepIndex <= currentIndex
 }
 
-// Carregar pedidos do localStorage
-const loadOrders = () => {
-  const savedOrders = localStorage.getItem('orders')
-  if (savedOrders) {
-    orders.value = JSON.parse(savedOrders)
-    // Ordenar por data decrescente (mais recentes primeiro)
-    orders.value.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }
-}
-
 // Redirecionar para página de detalhes do pedido
 const goToOrderDetails = (orderId: string) => {
-  // Redirecionar para a página de orders com o ID do pedido
   router.push(`/orders?orderId=${orderId}`)
 }
 
@@ -324,6 +312,13 @@ const saveProfile = async () => {
   }
 }
 
+// Observar mudanças na autenticação
+watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) {
+    ordersStore.syncWithUser()  // Carregar pedidos do usuário
+  }
+})
+
 // Verificar autenticação e carregar pedidos
 onMounted(() => {
   if (!authStore.isAuthenticated) {
@@ -331,7 +326,8 @@ onMounted(() => {
     return
   }
   
-  loadOrders()
+  // Carregar pedidos usando o ordersStore
+  ordersStore.syncWithUser()
   
   // Simular carregamento mínimo
   setTimeout(() => {

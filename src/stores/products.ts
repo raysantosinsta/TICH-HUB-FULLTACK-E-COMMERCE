@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Product } from '../types'
+import { Product } from '../models/product.model'
+import type { ProductRating } from '../models/product.model'
 
 export const useProductsStore = defineStore('products', () => {
   const products = ref<Product[]>([])
@@ -15,7 +16,8 @@ export const useProductsStore = defineStore('products', () => {
     try {
       const response = await fetch('https://fakestoreapi.com/products')
       if (!response.ok) throw new Error('Erro ao carregar produtos')
-      products.value = await response.json()
+      const data = await response.json()
+      products.value = Product.fromAPIList(data)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro desconhecido'
       console.error('Erro:', err)
@@ -31,7 +33,8 @@ export const useProductsStore = defineStore('products', () => {
     try {
       const response = await fetch(`https://fakestoreapi.com/products/category/${category}`)
       if (!response.ok) throw new Error('Erro ao carregar produtos')
-      products.value = await response.json()
+      const data = await response.json()
+      products.value = Product.fromAPIList(data)
       selectedCategory.value = category
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Erro desconhecido'

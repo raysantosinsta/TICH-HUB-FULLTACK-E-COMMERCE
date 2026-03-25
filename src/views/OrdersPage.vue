@@ -56,7 +56,7 @@
                 <h4 class="product-name">{{ truncateTitle(product.name, 40) }}</h4>
                 <div class="product-meta">
                   <span class="product-quantity">Qtd: {{ product.quantity }}</span>
-                  <span class="product-price">R$ {{ formatPrice(product.price) }}</span>
+                  <span class="product-price">{{ formatPrice(product.price) }}</span>
                 </div>
               </div>
             </div>
@@ -69,7 +69,7 @@
           <div class="order-footer">
             <div class="order-total">
               <span>Total do pedido</span>
-              <strong>R$ {{ formatPrice(order.total) }}</strong>
+              <strong>{{ formatPrice(order.total) }}</strong>
             </div>
             <button class="order-details-btn" @click="viewOrderDetails(order)">
               Ver detalhes
@@ -174,9 +174,9 @@
               <div class="product-info">
                 <div class="product-name">{{ product.name }}</div>
                 <div class="product-meta">
-                  <span>R$ {{ formatPrice(product.price) }}</span>
+                  <span>{{ formatPrice(product.price) }}</span>
                   <span>Qtd: {{ product.quantity }}</span>
-                  <span>Subtotal: R$ {{ formatPrice(product.price * product.quantity) }}</span>
+                  <span>Subtotal: {{ formatPrice(product.price * product.quantity) }}</span>
                 </div>
               </div>
             </div>
@@ -185,19 +185,19 @@
           <div class="order-summary-detail">
             <div class="summary-row">
               <span>Subtotal:</span>
-              <span>R$ {{ formatPrice(selectedOrder.subtotal) }}</span>
+              <span>{{ formatPrice(selectedOrder.subtotal) }}</span>
             </div>
             <div class="summary-row">
               <span>Frete:</span>
-              <span>R$ {{ formatPrice(selectedOrder.shipping) }}</span>
+              <span>{{ formatPrice(selectedOrder.shipping) }}</span>
             </div>
             <div v-if="selectedOrder.discount > 0" class="summary-row discount">
               <span>Desconto:</span>
-              <span>- R$ {{ formatPrice(selectedOrder.discount) }}</span>
+              <span>- {{ formatPrice(selectedOrder.discount) }}</span>
             </div>
             <div class="summary-row total">
               <span>Total:</span>
-              <span>R$ {{ formatPrice(selectedOrder.total) }}</span>
+              <span>{{ formatPrice(selectedOrder.total) }}</span>
             </div>
           </div>
         </div>
@@ -260,63 +260,69 @@ const closeModal = () => {
   selectedOrder.value = null
 }
 
+// Função para carregar pedidos
+const loadOrdersData = async () => {
+  if (!authStore.isAuthenticated) return
+  
+  loading.value = true
+  
+  try {
+    // Sincronizar pedidos do usuário
+    ordersStore.syncWithUser()
+    
+    // Pequeno delay para garantir que os dados foram carregados
+    setTimeout(() => {
+      loading.value = false
+      
+      // Se tiver orderId na URL, abrir modal do pedido
+      if (route.query.orderId) {
+        const orderId = route.query.orderId as string
+        const order = ordersStore.getOrderById(orderId)
+        if (order) {
+          selectedOrder.value = order
+        } else {
+          toast.info('Pedido não encontrado', 'O pedido que você tentou acessar não foi encontrado.', 3000)
+        }
+      }
+    }, 300)
+  } catch (error) {
+    console.error('Erro ao carregar pedidos:', error)
+    toast.error('Erro', 'Não foi possível carregar seus pedidos.', 3000)
+    loading.value = false
+  }
+}
+
 // Observar mudanças na autenticação
 watch(() => authStore.isAuthenticated, (isAuthenticated) => {
   if (isAuthenticated) {
-    loading.value = true
-    ordersStore.syncWithUser()
-    setTimeout(() => {
-      loading.value = false
-    }, 500)
+    loadOrdersData()
   } else {
     router.push('/login')
   }
 })
 
-// Observar pedidos carregados
-watch(() => orders.value, () => {
-  // Se tiver orderId na URL e pedidos carregados, abrir modal do pedido
-  if (route.query.orderId && orders.value.length > 0 && !selectedOrder.value) {
-    const orderId = route.query.orderId as string
-    const order = ordersStore.getOrderById(orderId)
-    if (order) {
-      setTimeout(() => {
-        selectedOrder.value = order
-      }, 300)
-    }
+// Observar mudanças nos pedidos (para quando um novo pedido for criado)
+watch(() => orders.value.length, () => {
+  // Quando um novo pedido for adicionado, recarregar os dados
+  if (authStore.isAuthenticated && !loading.value) {
+    loadOrdersData()
   }
 })
 
-// Carregar dados
-onMounted(async () => {
+// Carregar dados ao montar o componente
+onMounted(() => {
   if (!authStore.isAuthenticated) {
     toast.info('Login necessário', 'Faça login para visualizar seus pedidos.', 3000)
     router.push('/login')
     return
   }
   
-  loading.value = true
-  ordersStore.syncWithUser()
-  
-  // Pequeno delay para garantir que os dados foram carregados
-  setTimeout(() => {
-    loading.value = false
-    
-    // Se tiver orderId na URL, abrir modal do pedido
-    if (route.query.orderId) {
-      const orderId = route.query.orderId as string
-      const order = ordersStore.getOrderById(orderId)
-      if (order) {
-        selectedOrder.value = order
-      } else {
-        toast.info('Pedido não encontrado', 'O pedido que você tentou acessar não foi encontrado.', 3000)
-      }
-    }
-  }, 500)
+  loadOrdersData()
 })
 </script>
 
 <style scoped>
+/* Mantenha todos os estilos existentes */
 .orders-page {
   position: relative;
   min-height: 100vh;

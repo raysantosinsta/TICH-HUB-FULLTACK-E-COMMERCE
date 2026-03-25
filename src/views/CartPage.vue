@@ -55,7 +55,7 @@
             </div>
 
             <div class="price-col">
-              <span class="price">R$ {{ formatPrice(item.product.price) }}</span>
+              <span class="price">{{ formatPrice(item.product.price) }}</span>
             </div>
 
             <div class="quantity-col">
@@ -82,7 +82,7 @@
             </div>
 
             <div class="subtotal-col">
-              <span class="subtotal">R$ {{ formatPrice(item.product.price * item.quantity) }}</span>
+              <span class="subtotal">{{ formatPrice(item.product.price * item.quantity) }}</span>
             </div>
 
             <div class="action-col">
@@ -101,22 +101,22 @@
           
           <div class="summary-row">
             <span>Subtotal</span>
-            <span>R$ {{ formatPrice(subtotal) }}</span>
+            <span>{{ formatPrice(subtotal) }}</span>
           </div>
           
           <div class="summary-row">
             <span>Frete</span>
-            <span>{{ shipping === 0 ? 'Grátis' : `R$ ${formatPrice(shipping)}` }}</span>
+            <span>{{ shipping === 0 ? 'Grátis' : formatPrice(shipping) }}</span>
           </div>
           
           <div v-if="discount > 0" class="summary-row discount">
             <span>Desconto (10%)</span>
-            <span>- R$ {{ formatPrice(discount) }}</span>
+            <span>- {{ formatPrice(discount) }}</span>
           </div>
           
           <div class="summary-row total">
             <span>Total</span>
-            <span>R$ {{ formatPrice(total) }}</span>
+            <span>{{ formatPrice(total) }}</span>
           </div>
           
           <div class="summary-actions">
@@ -165,7 +165,10 @@ const discount = computed(() => cartStore.discount)
 const total = computed(() => cartStore.total)
 
 const formatPrice = (price: number) => {
-  return price.toFixed(2).replace('.', ',')
+  return price.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  })
 }
 
 const formatCategory = (category: string) => {
@@ -196,6 +199,7 @@ const goToProduct = (productId: number) => {
 }
 
 const finalizeOrder = async () => {
+  // Verificar se usuário está logado
   if (!authStore.isAuthenticated) {
     const result = await confirm({
       title: 'Login necessário',
@@ -211,47 +215,51 @@ const finalizeOrder = async () => {
     return
   }
 
+  // Verificar se carrinho está vazio
   if (cartItems.value.length === 0) {
     toast.warning('Carrinho vazio', 'Adicione produtos ao carrinho antes de finalizar.', 3000)
     return
   }
 
+  // Confirmar compra
   const result = await confirm({
     title: 'Finalizar compra',
-    message: `Deseja finalizar a compra no valor total de R$ ${formatPrice(total.value)}?`,
+    message: `Deseja finalizar a compra no valor total de ${formatPrice(total.value)}?`,
     confirmText: 'Confirmar compra',
     cancelText: 'Cancelar',
     type: 'warning'
   })
 
-  if (result) {
-    checkoutLoading.value = true
+  if (!result) return
 
-    // Simular processamento
-    setTimeout(() => {
-      // Criar itens do pedido
-      const orderItems = cartItems.value.map(item => ({
+  checkoutLoading.value = true
+
+  try {
+    // Preparar itens do pedido no formato que o createOrder espera
+    const orderItems = cartItems.value.map(item => ({
+      product: {
         id: item.product.id,
-        name: item.product.title,
+        title: item.product.title,
         price: item.product.price,
-        quantity: item.quantity,
         image: item.product.image,
-        category: item.product.category
-      }))
+        category: item.product.category,
+        discount: item.product.discount || 0
+      },
+      quantity: item.quantity
+    }))
 
-      // Criar pedido
-      const order = ordersStore.createOrder(
-        orderItems,
-        subtotal.value,
-        shipping.value,
-        discount.value,
-        total.value
-      )
+    // Criar pedido usando o ordersStore (agora com a classe Order)
+    const order = ordersStore.createOrder(
+      orderItems,
+      subtotal.value,
+      shipping.value,
+      discount.value,
+      total.value
+    )
 
+    if (order) {
       // Limpar carrinho
       cartStore.clearCart()
-
-      checkoutLoading.value = false
 
       toast.success(
         'Pedido finalizado!',
@@ -261,7 +269,18 @@ const finalizeOrder = async () => {
 
       // Redirecionar para página de pedidos
       router.push('/orders')
-    }, 1500)
+    } else {
+      throw new Error('Erro ao criar pedido')
+    }
+  } catch (error) {
+    console.error('Erro ao finalizar pedido:', error)
+    toast.error(
+      'Erro',
+      'Não foi possível finalizar o pedido. Tente novamente.',
+      4000
+    )
+  } finally {
+    checkoutLoading.value = false
   }
 }
 
@@ -271,7 +290,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Seus estilos existentes do carrinho... */
 .cart-page {
   position: relative;
   min-height: 100vh;
