@@ -72,6 +72,6 @@ export const useProductsStore = defineStore('products', () => {
     fetchProducts,
     fetchProductsByCategory,
     getProductById,
-    getProductsByCategory // Adicionado o método que estava faltando
+    getProductsByCategory 
   }
 })

@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { Product } from '../types'
+import { computed, ref } from 'vue'
 
 export interface OrderItem {
   id: number
