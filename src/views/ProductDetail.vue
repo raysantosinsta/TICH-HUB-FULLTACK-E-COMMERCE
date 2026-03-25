@@ -11,6 +11,8 @@
       <nav class="breadcrumb">
         <router-link to="/">Home</router-link>
         <span class="separator">›</span>
+        <router-link to="/products">Produtos</router-link>
+        <span class="separator">›</span>
         <span class="current">{{ truncateTitle(product?.title || '', 40) }}</span>
       </nav>
 
@@ -72,17 +74,40 @@
             <!-- Descrição Curta -->
             <p class="short-description">{{ truncateDescription(product.description, 180) }}</p>
 
-            <!-- Botões de Ação -->
+            <!-- Botões de Ação com Tooltip -->
             <div class="action-buttons">
-              <button class="btn-cart" @click="addToCart">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" fill="none" stroke-width="1.5"/>
-                </svg>
-                Adicionar ao Carrinho
-              </button>
-              <button class="btn-buy" @click="buyNow">
-                Comprar Agora
-              </button>
+              <div class="tooltip-container">
+                <button 
+                  class="btn-cart" 
+                  @click="addToCart" 
+                  :disabled="addingToCart || !isAuthenticated"
+                  :class="{ 'btn-disabled': !isAuthenticated }"
+                >
+                  <svg v-if="!addingToCart" width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" fill="none" stroke-width="1.5"/>
+                  </svg>
+                  <span v-else class="spinner-small"></span>
+                  {{ addingToCart ? 'Adicionando...' : 'Adicionar ao Carrinho' }}
+                </button>
+                <span v-if="!isAuthenticated" class="tooltip-text">
+                  🔒 Faça login para adicionar ao carrinho
+                </span>
+              </div>
+              
+              <div class="tooltip-container">
+                <button 
+                  class="btn-buy" 
+                  @click="buyNow" 
+                  :disabled="buyingNow || !isAuthenticated"
+                  :class="{ 'btn-disabled': !isAuthenticated }"
+                >
+                  <span v-if="!buyingNow">Comprar Agora</span>
+                  <span v-else class="spinner-small"></span>
+                </button>
+                <span v-if="!isAuthenticated" class="tooltip-text">
+                  🔒 Faça login para comprar agora
+                </span>
+              </div>
             </div>
 
             <!-- Benefícios -->
@@ -105,6 +130,29 @@
                 </svg>
                 <span>Entrega rápida em até 5 dias</span>
               </div>
+            </div>
+
+            <!-- Mensagem Premium para Visitantes -->
+            <div v-if="!isAuthenticated" class="guest-message-premium">
+              <div class="guest-message-icon">🔒</div>
+              <div class="guest-message-content">
+                <strong>Faça login para comprar</strong>
+                <p>Você precisa estar logado para adicionar produtos ao carrinho e finalizar suas compras.</p>
+                <button class="login-action-btn" @click="goToLogin">
+                  Fazer login agora
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Mensagem para Usuário Logado -->
+            <div v-else class="welcome-message">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM12 6v6l4 2" stroke="currentColor" fill="none" stroke-width="1.5"/>
+              </svg>
+              <span>Olá, {{ user?.name }}! Adicione este produto ao carrinho e finalize sua compra.</span>
             </div>
           </div>
         </div>
@@ -239,6 +287,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductsStore } from '../stores/products'
 import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/auth'
 import { useToast } from '../plugins/toast'
 import type { Product } from '../types'
 
@@ -246,11 +295,14 @@ const route = useRoute()
 const router = useRouter()
 const store = useProductsStore()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const toast = useToast()
 
 const product = ref<Product | null>(null)
 const loading = ref(true)
 const activeTab = ref('description')
+const addingToCart = ref(false)
+const buyingNow = ref(false)
 
 const relatedProducts = computed(() => {
   if (!product.value) return []
@@ -259,8 +311,14 @@ const relatedProducts = computed(() => {
     .slice(0, 4)
 })
 
+const isAuthenticated = computed(() => authStore.isAuthenticated)
+const user = computed(() => authStore.user)
+
 const formatPrice = (price: number) => {
-  return price.toFixed(2).replace('.', ',')
+  return price.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  })
 }
 
 const formatCategory = (category: string) => {
@@ -287,29 +345,90 @@ const truncateDescription = (description: string, length: number = 200) => {
   return description
 }
 
-const addToCart = () => {
-  if (product.value) {
+const addToCart = async () => {
+  // Verificar se usuário está logado
+  if (!isAuthenticated.value) {
+    toast.warning(
+      'Login necessário',
+      'Faça login para adicionar produtos ao carrinho.',
+      4000
+    )
+    setTimeout(() => {
+      router.push('/login')
+    }, 1500)
+    return
+  }
+  
+  if (!product.value) return
+  
+  addingToCart.value = true
+  
+  try {
     cartStore.addToCart(product.value, 1)
+    
     toast.success(
       'Produto adicionado!', 
       `${product.value.title.substring(0, 50)}${product.value.title.length > 50 ? '...' : ''} foi adicionado ao carrinho.`,
       3000
     )
+  } catch (error) {
+    console.error('Erro ao adicionar ao carrinho:', error)
+    toast.error(
+      'Erro',
+      'Não foi possível adicionar o produto ao carrinho. Tente novamente.',
+      3000
+    )
+  } finally {
+    setTimeout(() => {
+      addingToCart.value = false
+    }, 500)
   }
 }
 
-const buyNow = () => {
-  if (product.value) {
+const buyNow = async () => {
+  // Verificar se usuário está logado
+  if (!isAuthenticated.value) {
+    toast.warning(
+      'Login necessário',
+      'Faça login para finalizar a compra.',
+      4000
+    )
+    setTimeout(() => {
+      router.push('/login')
+    }, 1500)
+    return
+  }
+  
+  if (!product.value) return
+  
+  buyingNow.value = true
+  
+  try {
     cartStore.addToCart(product.value, 1)
+    
     toast.success(
       'Compra iniciada!', 
       `${product.value.title.substring(0, 50)}${product.value.title.length > 50 ? '...' : ''} foi adicionado ao carrinho. Redirecionando...`,
       2000
     )
+    
     setTimeout(() => {
       router.push('/cart')
+      buyingNow.value = false
     }, 1500)
+  } catch (error) {
+    console.error('Erro ao iniciar compra:', error)
+    toast.error(
+      'Erro',
+      'Não foi possível iniciar a compra. Tente novamente.',
+      3000
+    )
+    buyingNow.value = false
   }
+}
+
+const goToLogin = () => {
+  router.push('/login')
 }
 
 const goToProduct = (id: number) => {
@@ -320,6 +439,7 @@ const goToProduct = (id: number) => {
 onMounted(async () => {
   const id = Number(route.params.id)
   
+  // Carregar produtos se necessário
   if (store.products.length === 0) {
     await store.fetchProducts()
   }
@@ -407,6 +527,7 @@ onMounted(async () => {
   margin-bottom: 40px;
   font-size: 0.875rem;
   color: rgba(245, 240, 230, 0.6);
+  flex-wrap: wrap;
 }
 
 .breadcrumb a {
@@ -606,8 +727,54 @@ onMounted(async () => {
   flex-wrap: wrap;
 }
 
-.btn-cart, .btn-buy {
+.tooltip-container {
+  position: relative;
   flex: 1;
+  min-width: 180px;
+}
+
+.tooltip-container .tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  color: var(--gold-primary);
+  text-align: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 100;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip-container .tooltip-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  bottom: 130%;
+}
+
+.btn-cart, .btn-buy {
+  width: 100%;
   padding: 14px 24px;
   font-size: 1rem;
   font-weight: 600;
@@ -626,7 +793,7 @@ onMounted(async () => {
   color: var(--gold-primary);
 }
 
-.btn-cart:hover {
+.btn-cart:hover:not(:disabled) {
   background: rgba(212, 175, 55, 0.1);
   transform: translateY(-2px);
 }
@@ -637,9 +804,36 @@ onMounted(async () => {
   color: var(--black-primary);
 }
 
-.btn-buy:hover {
+.btn-buy:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+}
+
+.btn-cart:disabled, .btn-buy:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn-cart.btn-disabled:hover,
+.btn-buy.btn-disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.spinner-small {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Benefits */
@@ -663,6 +857,79 @@ onMounted(async () => {
   color: var(--gold-primary);
 }
 
+/* Guest Message Premium */
+.guest-message-premium {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(212, 175, 55, 0.05) 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  animation: fadeInUp 0.5s ease;
+}
+
+.guest-message-icon {
+  font-size: 2rem;
+}
+
+.guest-message-content {
+  flex: 1;
+}
+
+.guest-message-content strong {
+  color: var(--gold-primary);
+  font-size: 1rem;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.guest-message-content p {
+  color: rgba(245, 240, 230, 0.7);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.login-action-btn {
+  background: var(--gold-primary);
+  color: var(--black-primary);
+  border: none;
+  padding: 8px 20px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+}
+
+/* Welcome Message */
+.welcome-message {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: rgba(245, 240, 230, 0.8);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+.welcome-message svg {
+  color: var(--gold-primary);
+  flex-shrink: 0;
+}
+
 /* Product Details Tabs */
 .product-details {
   margin-bottom: 80px;
@@ -678,6 +945,7 @@ onMounted(async () => {
   gap: 8px;
   border-bottom: 1px solid rgba(212, 175, 55, 0.2);
   margin-bottom: 30px;
+  flex-wrap: wrap;
 }
 
 .tab-btn {
@@ -877,8 +1145,12 @@ onMounted(async () => {
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
 }
 
-/* Responsividade */
-@media (max-width: 968px) {
+/* Responsividade do Tooltip */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+
   .product-main {
     grid-template-columns: 1fr;
     gap: 40px;
@@ -901,6 +1173,45 @@ onMounted(async () => {
     font-size: 2rem;
   }
 
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .tooltip-container {
+    width: 100%;
+  }
+
+  .tooltip-container .tooltip-text {
+    white-space: normal;
+    width: 200px;
+    font-size: 0.7rem;
+    padding: 6px 12px;
+  }
+
+  .tooltip-container .tooltip-text::after {
+    border-width: 4px;
+  }
+
+  .guest-message-premium {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .login-action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .welcome-message {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .products-grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
   .tabs {
     overflow-x: auto;
   }
@@ -914,21 +1225,6 @@ onMounted(async () => {
   }
 }
 
-@media (max-width: 768px) {
-  .container {
-    padding: 0 16px;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-  }
-}
-
 @media (max-width: 480px) {
   .product-details {
     padding: 20px;
@@ -936,6 +1232,17 @@ onMounted(async () => {
 
   .products-grid {
     grid-template-columns: 1fr;
+  }
+
+  .spec-item {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .tooltip-container .tooltip-text {
+    width: 180px;
+    font-size: 0.65rem;
   }
 }
 </style>

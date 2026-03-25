@@ -14,7 +14,7 @@
       <SearchBar />
       
       <div class="nav-icons">
-        <!-- Ícone de Favoritos -->
+        <!-- Ícone de Favoritos (só aparece se logado) -->
         <router-link 
           v-if="isAuthenticated"
           to="/favorites" 
@@ -27,15 +27,20 @@
           <span v-if="totalFavorites > 0" class="favorites-badge">{{ totalFavorites }}</span>
         </router-link>
         
-        <!-- Ícone do Carrinho -->
-        <router-link to="/cart" class="icon-btn cart-btn" aria-label="Carrinho">
+        <!-- Ícone do Carrinho (só aparece se logado) -->
+        <router-link 
+          v-if="isAuthenticated"
+          to="/cart" 
+          class="icon-btn cart-btn" 
+          aria-label="Carrinho"
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
             <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
           </svg>
           <span v-if="cartTotalItems > 0" class="cart-badge">{{ cartTotalItems }}</span>
         </router-link>
         
-        <!-- Ícone do Usuário com Dropdown -->
+        <!-- Ícone do Usuário com Dropdown (sempre visível) -->
         <div class="user-menu" v-click-outside="closeUserMenu">
           <button class="icon-btn user-btn" @click="toggleUserMenu" aria-label="Usuário">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -91,7 +96,7 @@
                 <span v-if="totalFavorites > 0" class="item-badge">{{ totalFavorites }}</span>
               </router-link>
               
-              <router-link to="/cart" class="dropdown-item">
+              <router-link to="/cart" class="dropdown-item" v-if="isAuthenticated">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
                 </svg>
@@ -180,12 +185,13 @@ const handleLogout = () => {
 // Observar mudanças na autenticação para sincronizar favoritos
 watch(() => authStore.isAuthenticated, (newValue, oldValue) => {
   if (newValue) {
-    // Usuário acabou de fazer login - carregar favoritos do usuário
+    // Usuário acabou de fazer login - carregar dados do usuário
     favoritesStore.syncWithUser()
-    cartStore.loadCart()
+    cartStore.syncWithUser()
   } else if (oldValue && !newValue) {
     // Usuário acabou de fazer logout - limpar dados locais
     favoritesStore.syncWithUser()
+    cartStore.syncWithUser()
   }
 })
 
@@ -193,6 +199,7 @@ watch(() => authStore.isAuthenticated, (newValue, oldValue) => {
 watch(() => authStore.user?.id, () => {
   if (authStore.isAuthenticated) {
     favoritesStore.syncWithUser()
+    cartStore.syncWithUser()
   }
 })
 
@@ -216,12 +223,11 @@ onMounted(() => {
   // Carregar dados iniciais
   authStore.loadUser()
   
-  // Se já estiver autenticado, carregar favoritos
+  // Se já estiver autenticado, carregar dados
   if (authStore.isAuthenticated) {
     favoritesStore.syncWithUser()
+    cartStore.syncWithUser()
   }
-  
-  cartStore.loadCart()
 })
 </script>
 

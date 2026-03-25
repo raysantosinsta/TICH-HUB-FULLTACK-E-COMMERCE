@@ -17,20 +17,35 @@
       </div>
       <div class="product-price">
         <span class="price">R$ {{ formatPrice(product.price) }}</span>
-        <button class="add-to-cart" @click.stop="addToCart">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" fill="none" stroke-width="1.5"/>
-          </svg>
-          Adicionar
-        </button>
+        <div class="add-to-cart-wrapper">
+          <button 
+            class="add-to-cart" 
+            @click.stop="addToCart"
+            :class="{ 'btn-disabled': !isAuthenticated }"
+            :disabled="addingToCart"
+          >
+            <svg v-if="!addingToCart" width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" fill="none" stroke-width="1.5"/>
+            </svg>
+            <span v-else class="spinner-small"></span>
+            {{ addingToCart ? 'Adicionando...' : 'Adicionar' }}
+          </button>
+          <!-- Tooltip para usuários não logados -->
+          <span v-if="!isAuthenticated" class="tooltip-text">
+            🔒 Faça login para adicionar
+          </span>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import type { Product } from '../types'
 import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/auth'
 import { useToast } from '../plugins/toast'
 import FavoriteButton from './FavoriteButton.vue'
 
@@ -38,12 +53,18 @@ const props = defineProps<{
   product: Product
 }>()
 
+const router = useRouter()
 const cartStore = useCartStore()
+const authStore = useAuthStore()
 const toast = useToast()
+
+const addingToCart = ref(false)
 
 const emit = defineEmits<{
   (e: 'view', product: Product): void
 }>()
+
+const isAuthenticated = computed(() => authStore.isAuthenticated)
 
 const truncateTitle = (title: string) => {
   return title.length > 50 ? title.substring(0, 47) + '...' : title
@@ -67,13 +88,42 @@ const viewProduct = () => {
   emit('view', props.product)
 }
 
-const addToCart = () => {
-  cartStore.addToCart(props.product, 1)
-  toast.success(
-    'Produto adicionado!', 
-    `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? '...' : ''} foi adicionado ao carrinho.`,
-    3000
-  )
+const addToCart = async () => {
+  // Verificar se usuário está logado
+  if (!isAuthenticated.value) {
+    toast.warning(
+      'Login necessário',
+      'Faça login para adicionar produtos ao carrinho.',
+      4000
+    )
+    // Redirecionar para login após 1.5 segundos
+    setTimeout(() => {
+      router.push('/login')
+    }, 1500)
+    return
+  }
+  
+  addingToCart.value = true
+  
+  try {
+    cartStore.addToCart(props.product, 1)
+    toast.success(
+      'Produto adicionado!', 
+      `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? '...' : ''} foi adicionado ao carrinho.`,
+      3000
+    )
+  } catch (error) {
+    console.error('Erro ao adicionar ao carrinho:', error)
+    toast.error(
+      'Erro',
+      'Não foi possível adicionar o produto ao carrinho. Tente novamente.',
+      3000
+    )
+  } finally {
+    setTimeout(() => {
+      addingToCart.value = false
+    }, 500)
+  }
 }
 
 const onFavoriteUpdate = (isFavorited: boolean) => {
@@ -82,7 +132,6 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
 </script>
 
 <style scoped>
-/* Seus estilos existentes do ProductCard */
 .product-card {
   background: rgba(11, 11, 15, 0.6);
   backdrop-filter: blur(10px);
@@ -146,15 +195,14 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   top: 12px;
   right: 12px;
   z-index: 10;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 50%;
-  backdrop-filter: blur(4px);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  /* Removido o background para que o tooltip do FavoriteButton funcione */
+  background: transparent;
+  transition: all 0.3s ease;
+  opacity: 1;
 }
 
 .product-card:hover .favorite-overlay {
-  opacity: 1;
+  transform: scale(1.05);
 }
 
 .quick-view {
@@ -218,6 +266,11 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   color: var(--gold-primary);
 }
 
+/* Wrapper para o botão com tooltip */
+.add-to-cart-wrapper {
+  position: relative;
+}
+
 .add-to-cart {
   background: rgba(212, 175, 55, 0.15);
   color: var(--gold-primary);
@@ -233,11 +286,76 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   gap: 6px;
 }
 
-.add-to-cart:hover {
+.add-to-cart:hover:not(:disabled) {
   background: var(--gold-primary);
   color: var(--black-primary);
   transform: scale(1.05);
   border-color: var(--gold-primary);
+}
+
+.add-to-cart.btn-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.add-to-cart.btn-disabled:hover {
+  transform: none;
+  background: rgba(212, 175, 55, 0.15);
+  color: var(--gold-primary);
+}
+
+/* Tooltip Styles */
+.add-to-cart-wrapper .tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: 120%;
+  right: 0;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  color: var(--gold-primary);
+  text-align: center;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  z-index: 100;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.add-to-cart-wrapper .tooltip-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 15px;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: rgba(0, 0, 0, 0.9) transparent transparent transparent;
+}
+
+.add-to-cart-wrapper:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  bottom: 130%;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  border-top-color: var(--gold-primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
@@ -247,6 +365,29 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   
   .favorite-overlay {
     opacity: 1;
+    background: transparent;
+  }
+  
+  .add-to-cart-wrapper .tooltip-text {
+    white-space: normal;
+    width: 160px;
+    font-size: 0.65rem;
+    right: -20px;
+  }
+  
+  .add-to-cart-wrapper .tooltip-text::after {
+    right: 30px;
+  }
+}
+
+@media (max-width: 480px) {
+  .add-to-cart-wrapper .tooltip-text {
+    width: 140px;
+    right: -30px;
+  }
+  
+  .add-to-cart-wrapper .tooltip-text::after {
+    right: 40px;
   }
 }
 </style>

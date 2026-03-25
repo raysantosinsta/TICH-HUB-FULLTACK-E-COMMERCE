@@ -42,24 +42,26 @@ export const useCartStore = defineStore('cart', () => {
     localStorage.setItem(storageKey, JSON.stringify(items.value))
   }
 
-  // Adicionar item ao carrinho
-  const addToCart = (product: Product, quantity: number = 1) => {
-    if (!authStore.isAuthenticated) {
-      console.warn('Tentativa de adicionar ao carrinho sem usuário logado')
-      return false
-    }
-
-    const existingItem = items.value.find(item => item.product.id === product.id)
-    
-    if (existingItem) {
-      existingItem.quantity += quantity
-    } else {
-      items.value.push({ product, quantity })
-    }
-    
-    saveCart()
-    return true
+ // No cartStore, modifique a função addToCart
+const addToCart = (product: Product, quantity: number = 1) => {
+  const existingItem = items.value.find(item => item.product.id === product.id)
+  
+  if (existingItem) {
+    existingItem.quantity += quantity
+  } else {
+    items.value.push({ product, quantity })
   }
+  
+  // Salvar no localStorage apropriado
+  if (authStore.isAuthenticated) {
+    saveCart() // Salva no localStorage do usuário
+  } else {
+    // Salvar em um carrinho temporário para visitantes
+    localStorage.setItem('cart_guest', JSON.stringify(items.value))
+  }
+  
+  return true
+}
 
   // Remover item do carrinho
   const removeFromCart = (productId: number) => {
