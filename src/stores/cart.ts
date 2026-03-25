@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useAuthStore } from './auth'
 import type { Product } from '../types'
 
 export interface CartItem {
@@ -9,22 +10,45 @@ export interface CartItem {
 
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartItem[]>([])
+  const authStore = useAuthStore()
 
-  // Carregar carrinho do localStorage
+  // Obter chave do localStorage baseada no usuário
+  const getStorageKey = () => {
+    const userId = authStore.user?.id
+    if (!userId) return null
+    return `cart_user_${userId}`
+  }
+
+  // Carregar carrinho do localStorage do usuário
   const loadCart = () => {
-    const savedCart = localStorage.getItem('cart')
+    const storageKey = getStorageKey()
+    if (!storageKey) {
+      items.value = []
+      return
+    }
+
+    const savedCart = localStorage.getItem(storageKey)
     if (savedCart) {
       items.value = JSON.parse(savedCart)
+    } else {
+      items.value = []
     }
   }
 
-  // Salvar carrinho no localStorage
+  // Salvar carrinho no localStorage do usuário
   const saveCart = () => {
-    localStorage.setItem('cart', JSON.stringify(items.value))
+    const storageKey = getStorageKey()
+    if (!storageKey) return
+    localStorage.setItem(storageKey, JSON.stringify(items.value))
   }
 
   // Adicionar item ao carrinho
   const addToCart = (product: Product, quantity: number = 1) => {
+    if (!authStore.isAuthenticated) {
+      console.warn('Tentativa de adicionar ao carrinho sem usuário logado')
+      return false
+    }
+
     const existingItem = items.value.find(item => item.product.id === product.id)
     
     if (existingItem) {
@@ -34,6 +58,7 @@ export const useCartStore = defineStore('cart', () => {
     }
     
     saveCart()
+    return true
   }
 
   // Remover item do carrinho
@@ -62,6 +87,24 @@ export const useCartStore = defineStore('cart', () => {
   const clearCart = () => {
     items.value = []
     saveCart()
+  }
+
+  // Limpar carrinho do usuário (útil para logout)
+  const clearUserCart = () => {
+    items.value = []
+    const storageKey = getStorageKey()
+    if (storageKey) {
+      localStorage.removeItem(storageKey)
+    }
+  }
+
+  // Sincronizar com o usuário atual
+  const syncWithUser = () => {
+    if (authStore.isAuthenticated) {
+      loadCart()
+    } else {
+      items.value = []
+    }
   }
 
   // Computed: total de itens
@@ -100,6 +143,8 @@ export const useCartStore = defineStore('cart', () => {
     addToCart,
     removeFromCart,
     updateQuantity,
-    clearCart
+    clearCart,
+    clearUserCart,
+    syncWithUser
   }
 })

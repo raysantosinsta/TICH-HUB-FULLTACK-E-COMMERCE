@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { useAuthStore } from './auth'
+import type { Product } from '../types'
 
 export interface OrderItem {
   id: number
@@ -25,18 +27,36 @@ export interface Order {
 
 export const useOrdersStore = defineStore('orders', () => {
   const orders = ref<Order[]>([])
+  const authStore = useAuthStore()
 
-  // Carregar pedidos do localStorage
+  // Obter chave do localStorage baseada no usuário
+  const getStorageKey = () => {
+    const userId = authStore.user?.id
+    if (!userId) return null
+    return `orders_user_${userId}`
+  }
+
+  // Carregar pedidos do localStorage do usuário
   const loadOrders = () => {
-    const savedOrders = localStorage.getItem('orders')
+    const storageKey = getStorageKey()
+    if (!storageKey) {
+      orders.value = []
+      return
+    }
+
+    const savedOrders = localStorage.getItem(storageKey)
     if (savedOrders) {
       orders.value = JSON.parse(savedOrders)
+    } else {
+      orders.value = []
     }
   }
 
-  // Salvar pedidos no localStorage
+  // Salvar pedidos no localStorage do usuário
   const saveOrders = () => {
-    localStorage.setItem('orders', JSON.stringify(orders.value))
+    const storageKey = getStorageKey()
+    if (!storageKey) return
+    localStorage.setItem(storageKey, JSON.stringify(orders.value))
   }
 
   // Criar novo pedido
@@ -46,7 +66,13 @@ export const useOrdersStore = defineStore('orders', () => {
     shipping: number,
     discount: number,
     total: number
-  ): Order => {
+  ): Order | null => {
+    // Verificar se usuário está logado
+    if (!authStore.isAuthenticated) {
+      console.warn('Tentativa de criar pedido sem usuário logado')
+      return null
+    }
+
     const now = new Date()
     const orderId = `ORD-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(orders.value.length + 1).padStart(4, '0')}`
 
@@ -79,6 +105,24 @@ export const useOrdersStore = defineStore('orders', () => {
   // Obter pedido por ID
   const getOrderById = (orderId: string): Order | undefined => {
     return orders.value.find(o => o.id === orderId)
+  }
+
+  // Limpar pedidos do usuário (útil para logout)
+  const clearOrders = () => {
+    orders.value = []
+    const storageKey = getStorageKey()
+    if (storageKey) {
+      localStorage.removeItem(storageKey)
+    }
+  }
+
+  // Sincronizar com o usuário atual
+  const syncWithUser = () => {
+    if (authStore.isAuthenticated) {
+      loadOrders()
+    } else {
+      orders.value = []
+    }
   }
 
   // Contagem de pedidos
@@ -116,6 +160,8 @@ export const useOrdersStore = defineStore('orders', () => {
     updateOrderStatus,
     getOrderById,
     getStatusBadge,
-    formatDate
+    formatDate,
+    clearOrders,
+    syncWithUser
   }
 })

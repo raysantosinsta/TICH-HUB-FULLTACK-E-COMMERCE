@@ -21,6 +21,7 @@ export const useAuthStore = defineStore('auth', () => {
   const userRole = computed(() => user.value?.role || 'guest')
   const userName = computed(() => user.value?.name || '')
   const userEmail = computed(() => user.value?.email || '')
+  const userId = computed(() => user.value?.id || null)
   const isLoading = computed(() => loading.value)
 
   // Carregar usuário do localStorage
@@ -56,6 +57,11 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('auth_token', response.token)
         localStorage.setItem('auth_user', JSON.stringify(response.user))
         
+        // Disparar evento de login para outros stores
+        window.dispatchEvent(new CustomEvent('user-login', { 
+          detail: { userId: response.user.id } 
+        }))
+        
         return { success: true }
       } else {
         error.value = response.message || 'Email ou senha inválidos'
@@ -86,6 +92,11 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('auth_token', response.token)
         localStorage.setItem('auth_user', JSON.stringify(response.user))
         
+        // Disparar evento de login para outros stores
+        window.dispatchEvent(new CustomEvent('user-login', { 
+          detail: { userId: response.user.id } 
+        }))
+        
         return { success: true }
       } else {
         error.value = response.message || 'Erro ao criar conta'
@@ -115,7 +126,9 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('auth_user')
     
     // Disparar evento de logout para outros stores limparem seus dados
-    window.dispatchEvent(new CustomEvent('user-logout', { detail: { userId } }))
+    window.dispatchEvent(new CustomEvent('user-logout', { 
+      detail: { userId } 
+    }))
   }
 
   // Obter token atual
@@ -129,12 +142,36 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Atualizar dados do usuário
- const updateUser = (updatedUser: Partial<User>) => {
-  if (user.value) {
-    user.value = { ...user.value, ...updatedUser }
-    localStorage.setItem('auth_user', JSON.stringify(user.value))
+  const updateUser = (updatedUser: Partial<User>) => {
+    if (user.value) {
+      user.value = { ...user.value, ...updatedUser }
+      localStorage.setItem('auth_user', JSON.stringify(user.value))
+      
+      // Disparar evento de atualização de usuário
+      window.dispatchEvent(new CustomEvent('user-updated', { 
+        detail: { user: user.value } 
+      }))
+    }
   }
-}
+
+  // Limpar todos os dados do usuário (útil para quando a conta é excluída)
+  const clearUserData = () => {
+    const userId = user.value?.id
+    
+    // Limpar estado
+    token.value = null
+    user.value = null
+    error.value = null
+    
+    // Limpar localStorage de autenticação
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('auth_user')
+    
+    // Disparar evento de limpeza de dados
+    window.dispatchEvent(new CustomEvent('user-data-clear', { 
+      detail: { userId } 
+    }))
+  }
 
   // Carregar usuário ao iniciar
   loadUser()
@@ -151,6 +188,7 @@ export const useAuthStore = defineStore('auth', () => {
     userRole,
     userName,
     userEmail,
+    userId,
     isLoading,
     
     // Actions
@@ -160,6 +198,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     getToken,
     isTokenValid,
-    updateUser
+    updateUser,
+    clearUserData
   }
 })

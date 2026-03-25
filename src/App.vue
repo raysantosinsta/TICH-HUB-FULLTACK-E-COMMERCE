@@ -17,6 +17,7 @@ import ConfirmPlugin from './plugins/confirm'
 import { useAuthStore } from './stores/auth'
 import { useFavoritesStore } from './stores/favorites'
 import { useCartStore } from './stores/cart'
+import { useOrdersStore } from './stores/orders'
 import AppLoading from './components/AppLoading.vue'
 
 const router = useRouter()
@@ -25,6 +26,7 @@ const confirmDialogRef = ref()
 const authStore = useAuthStore()
 const favoritesStore = useFavoritesStore()
 const cartStore = useCartStore()
+const ordersStore = useOrdersStore()
 
 // Configurar plugins
 onMounted(() => {
@@ -47,8 +49,12 @@ const initializeApp = () => {
   
   // Se usuário estiver autenticado, carregar dados
   if (authStore.isAuthenticated) {
+    console.log('App inicializado com usuário logado:', authStore.user?.id)
     favoritesStore.syncWithUser()
-    cartStore.loadCart()
+    cartStore.syncWithUser()
+    ordersStore.syncWithUser()
+  } else {
+    console.log('App inicializado sem usuário logado')
   }
 }
 
@@ -56,24 +62,27 @@ const initializeApp = () => {
 watch(() => authStore.isAuthenticated, (isAuthenticated, wasAuthenticated) => {
   if (isAuthenticated && !wasAuthenticated) {
     // Usuário acabou de fazer login
-    console.log('Usuário logado, carregando dados...')
+    console.log('Usuário logado (watch), carregando dados...')
     favoritesStore.syncWithUser()
-    cartStore.loadCart()
+    cartStore.syncWithUser()
+    ordersStore.syncWithUser()
   } else if (!isAuthenticated && wasAuthenticated) {
     // Usuário acabou de fazer logout
-    console.log('Usuário deslogado, limpando dados...')
+    console.log('Usuário deslogado (watch), limpando dados...')
     favoritesStore.syncWithUser()
-    cartStore.clearCart()
+    cartStore.syncWithUser()
+    ordersStore.syncWithUser()
   }
 })
 
-// Observar mudanças no usuário
+// Observar mudanças no ID do usuário
 watch(() => authStore.user?.id, (newUserId, oldUserId) => {
   if (newUserId && newUserId !== oldUserId) {
     // Mudança de usuário (ex: login com conta diferente)
     console.log(`Usuário mudou de ${oldUserId} para ${newUserId}, recarregando dados...`)
     favoritesStore.syncWithUser()
-    cartStore.loadCart()
+    cartStore.syncWithUser()
+    ordersStore.syncWithUser()
   }
 })
 
@@ -83,38 +92,73 @@ const handleUserLogout = (event: CustomEvent) => {
   // Limpar dados do usuário que fez logout
   if (event.detail?.userId) {
     favoritesStore.clearUserFavorites(event.detail.userId)
+    cartStore.clearUserCart()
+    ordersStore.clearOrders()
   }
   favoritesStore.syncWithUser()
-  cartStore.clearCart()
+  cartStore.syncWithUser()
+  ordersStore.syncWithUser()
 }
 
 // Event listener para login
-const handleUserLogin = () => {
-  console.log('Evento de login recebido')
+const handleUserLogin = (event: CustomEvent) => {
+  console.log('Evento de login recebido:', event.detail)
   favoritesStore.syncWithUser()
-  cartStore.loadCart()
+  cartStore.syncWithUser()
+  ordersStore.syncWithUser()
+}
+
+// Event listener para atualização de usuário
+const handleUserUpdated = (event: CustomEvent) => {
+  console.log('Evento de atualização de usuário recebido:', event.detail)
+  // Dados do usuário já foram atualizados no authStore
+  // Os outros stores não precisam fazer nada, apenas continuar usando o user.id
+}
+
+// Event listener para limpeza de dados
+const handleUserDataClear = (event: CustomEvent) => {
+  console.log('Evento de limpeza de dados recebido:', event.detail)
+  if (event.detail?.userId) {
+    favoritesStore.clearUserFavorites(event.detail.userId)
+    cartStore.clearUserCart()
+    ordersStore.clearOrders()
+  }
+  favoritesStore.syncWithUser()
+  cartStore.syncWithUser()
+  ordersStore.syncWithUser()
 }
 
 // Registrar event listeners
 onMounted(() => {
   window.addEventListener('user-logout', handleUserLogout as EventListener)
   window.addEventListener('user-login', handleUserLogin as EventListener)
+  window.addEventListener('user-updated', handleUserUpdated as EventListener)
+  window.addEventListener('user-data-clear', handleUserDataClear as EventListener)
 })
 
 // Remover event listeners
 onUnmounted(() => {
   window.removeEventListener('user-logout', handleUserLogout as EventListener)
   window.removeEventListener('user-login', handleUserLogin as EventListener)
+  window.removeEventListener('user-updated', handleUserUpdated as EventListener)
+  window.removeEventListener('user-data-clear', handleUserDataClear as EventListener)
 })
 
 // Tratamento de erros globais
-window.addEventListener('error', (event) => {
+const handleGlobalError = (event: ErrorEvent) => {
   console.error('Erro global:', event.error)
   // Aqui você pode enviar erros para um serviço de monitoramento
-})
+  if (toastRef.value) {
+    ToastPlugin.error(
+      'Erro',
+      'Ocorreu um erro inesperado. Por favor, tente novamente.',
+      5000
+    )
+  }
+}
 
 // Tratamento de promessas rejeitadas não tratadas
-window.addEventListener('unhandledrejection', (event) => {
+const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
   console.error('Promise rejeitada não tratada:', event.reason)
   if (toastRef.value) {
     ToastPlugin.error(
@@ -123,6 +167,18 @@ window.addEventListener('unhandledrejection', (event) => {
       5000
     )
   }
+}
+
+// Registrar listeners de erro
+onMounted(() => {
+  window.addEventListener('error', handleGlobalError)
+  window.addEventListener('unhandledrejection', handleUnhandledRejection)
+})
+
+// Remover listeners de erro
+onUnmounted(() => {
+  window.removeEventListener('error', handleGlobalError)
+  window.removeEventListener('unhandledrejection', handleUnhandledRejection)
 })
 </script>
 

@@ -18,16 +18,23 @@
         <p class="orders-count">{{ totalOrders }} pedido(s) realizado(s)</p>
       </div>
 
+      <!-- Loading State -->
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Carregando seus pedidos...</p>
+      </div>
+
       <!-- Lista de Pedidos -->
-      <div v-if="orders.length > 0" class="orders-list">
+      <div v-else-if="orders.length > 0" class="orders-list">
         <div 
           v-for="order in orders" 
           :key="order.id"
           class="order-card"
+          :class="{ 'highlight': route.query.orderId === order.id }"
         >
           <div class="order-header">
             <div class="order-info">
-              <span class="order-id">{{ order.id }}</span>
+              <span class="order-id">Pedido {{ order.id }}</span>
               <span class="order-date">{{ formatDate(order.date) }}</span>
             </div>
             <div class="order-status" :style="{ color: statusBadge(order.status).color, background: statusBadge(order.status).bg }">
@@ -75,7 +82,7 @@
       </div>
 
       <!-- Estado Vazio -->
-      <div v-else class="empty-orders">
+      <div v-else-if="!loading" class="empty-orders">
         <div class="empty-content">
           <svg width="120" height="120" viewBox="0 0 24 24" fill="none">
             <path d="M3 6H21M6 12H18M9 18H15" stroke="currentColor" stroke-width="1.5"/>
@@ -83,11 +90,11 @@
           </svg>
           <h2>Você ainda não possui pedidos</h2>
           <p>Comece suas compras e acompanhe seus pedidos aqui.</p>
-          <router-link to="/" class="explore-btn">
+          <router-link to="/products" class="explore-btn">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
-            Ver produtos
+            Explorar produtos
           </router-link>
         </div>
       </div>
@@ -200,25 +207,30 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useOrdersStore } from '../stores/orders'
 import { useAuthStore } from '../stores/auth'
 import { useToast } from '../plugins/toast'
 import type { Order } from '../stores/orders'
 
 const router = useRouter()
+const route = useRoute()
 const ordersStore = useOrdersStore()
 const authStore = useAuthStore()
 const toast = useToast()
 
 const selectedOrder = ref<Order | null>(null)
+const loading = ref(true)
 
 const orders = computed(() => ordersStore.orders)
 const totalOrders = computed(() => ordersStore.totalOrders)
 
 const formatPrice = (price: number) => {
-  return price.toFixed(2).replace('.', ',')
+  return price.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  })
 }
 
 const formatDate = (dateString: string) => {
@@ -248,13 +260,59 @@ const closeModal = () => {
   selectedOrder.value = null
 }
 
-onMounted(() => {
+// Observar mudanças na autenticação
+watch(() => authStore.isAuthenticated, (isAuthenticated) => {
+  if (isAuthenticated) {
+    loading.value = true
+    ordersStore.syncWithUser()
+    setTimeout(() => {
+      loading.value = false
+    }, 500)
+  } else {
+    router.push('/login')
+  }
+})
+
+// Observar pedidos carregados
+watch(() => orders.value, () => {
+  // Se tiver orderId na URL e pedidos carregados, abrir modal do pedido
+  if (route.query.orderId && orders.value.length > 0 && !selectedOrder.value) {
+    const orderId = route.query.orderId as string
+    const order = ordersStore.getOrderById(orderId)
+    if (order) {
+      setTimeout(() => {
+        selectedOrder.value = order
+      }, 300)
+    }
+  }
+})
+
+// Carregar dados
+onMounted(async () => {
   if (!authStore.isAuthenticated) {
     toast.info('Login necessário', 'Faça login para visualizar seus pedidos.', 3000)
     router.push('/login')
     return
   }
-  ordersStore.loadOrders()
+  
+  loading.value = true
+  ordersStore.syncWithUser()
+  
+  // Pequeno delay para garantir que os dados foram carregados
+  setTimeout(() => {
+    loading.value = false
+    
+    // Se tiver orderId na URL, abrir modal do pedido
+    if (route.query.orderId) {
+      const orderId = route.query.orderId as string
+      const order = ordersStore.getOrderById(orderId)
+      if (order) {
+        selectedOrder.value = order
+      } else {
+        toast.info('Pedido não encontrado', 'O pedido que você tentou acessar não foi encontrado.', 3000)
+      }
+    }
+  }, 500)
 })
 </script>
 
@@ -338,6 +396,35 @@ onMounted(() => {
   font-size: 1rem;
 }
 
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 20px;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(212, 175, 55, 0.2);
+  border-top-color: var(--gold-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-state p {
+  color: rgba(245, 240, 230, 0.7);
+  font-size: 1rem;
+}
+
+/* Orders List */
 .orders-list {
   display: flex;
   flex-direction: column;
@@ -357,6 +444,18 @@ onMounted(() => {
   transform: translateY(-2px);
   border-color: var(--gold-primary);
   box-shadow: 0 10px 30px rgba(212, 175, 55, 0.1);
+}
+
+.order-card.highlight {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
+  animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.01); }
+  100% { transform: scale(1); }
 }
 
 .order-header {
@@ -782,6 +881,7 @@ onMounted(() => {
   }
 }
 
+/* Responsividade */
 @media (max-width: 768px) {
   .container {
     padding: 0 16px;
@@ -815,6 +915,23 @@ onMounted(() => {
 
   .modal-body {
     padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .order-product {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .product-image {
+    width: 80px;
+    height: 80px;
+  }
+
+  .product-meta {
+    justify-content: center;
   }
 }
 </style>
