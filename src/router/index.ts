@@ -4,6 +4,8 @@ import ProductDetail from '../views/ProductDetail.vue'
 import CartPage from '../views/CartPage.vue'
 import SearchResults from '../views/SearchResults.vue'
 import FavoritesPage from '../views/FavoritesPage.vue'
+import ProductsPage from '../views/ProductsPage.vue'
+
 
 
 const router = createRouter({
@@ -13,6 +15,11 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomePage
+    },
+    {
+      path: '/products',
+      name: 'products',
+      component: ProductsPage
     },
     {
       path: '/product/:id',

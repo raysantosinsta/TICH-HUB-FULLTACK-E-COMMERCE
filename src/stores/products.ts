@@ -3,13 +3,11 @@ import { ref, computed } from 'vue'
 import type { Product } from '../types'
 
 export const useProductsStore = defineStore('products', () => {
-  // Estado
   const products = ref<Product[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const selectedCategory = ref<string>('')
 
-  // Ações
   const fetchProducts = async () => {
     loading.value = true
     error.value = null
@@ -42,11 +40,15 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
-    const getProductById = (id: number): Product | undefined => {
+  // Método para buscar produtos por categoria (filtra localmente)
+  const getProductsByCategory = (category: string): Product[] => {
+    return products.value.filter(p => p.category === category)
+  }
+
+  const getProductById = (id: number): Product | undefined => {
     return products.value.find(p => p.id === id)
   }
 
-  // Getters (computados)
   const featuredProducts = computed(() => products.value.slice(0, 8))
   
   const categories = computed(() => {
@@ -60,18 +62,16 @@ export const useProductsStore = defineStore('products', () => {
   })
 
   return {
-    // Estado
     products,
     loading,
     error,
     selectedCategory,
-    // Getters
     featuredProducts,
     categories,
     productsByCategory,
-    // Ações
     fetchProducts,
     fetchProductsByCategory,
-    getProductById
+    getProductById,
+    getProductsByCategory // Adicionado o método que estava faltando
   }
 })

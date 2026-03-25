@@ -13,33 +13,39 @@
             {{ getCategoryIcon(category) }}
           </div>
           <h3>{{ formatCategoryName(category) }}</h3>
-          <p class="category-count">{{ getProductCount(category) }} products</p>
-          <button class="category-btn">Explore</button>
+          <p class="category-count">{{ getProductCount(category) }} produtos</p>
+          <button class="category-btn">Explorar</button>
         </div>
       </div>
       <div v-else-if="!loading" class="no-categories">
-        No categories available
+        <p>Carregando categorias...</p>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { useProductsStore } from '../stores/products';
-import { computed } from 'vue';
+import { useRouter } from 'vue-router'
+import { useProductsStore } from '../stores/products'
+import { computed } from 'vue'
 
-const store = useProductsStore();
-const categories = computed(() => store.categories);
-const loading = computed(() => store.loading);
+const router = useRouter()
+const store = useProductsStore()
+
+const categories = computed(() => store.categories)
+const loading = computed(() => store.loading)
 
 const formatCategoryName = (category: string): string => {
-  return category
-    .split("'")
-    .join("")
-    .split(" ")
+  const names: Record<string, string> = {
+    "men's clothing": "Moda Masculina",
+    "women's clothing": "Moda Feminina",
+    "jewelery": "Jóias",
+    "electronics": "Eletrônicos"
+  }
+  return names[category] || category.split("'").join("").split(" ")
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
+    .join(" ")
+}
 
 const getCategoryIcon = (category: string): string => {
   const icons: Record<string, string> = {
@@ -47,23 +53,62 @@ const getCategoryIcon = (category: string): string => {
     "women's clothing": "👗",
     "jewelery": "💍",
     "electronics": "📱"
-  };
-  return icons[category] || "🛍️";
-};
+  }
+  return icons[category] || "🛍️"
+}
 
 const getProductCount = (category: string): number => {
-  return store.getProductsByCategory(category).length;
-};
+  try {
+    // Verificar se o método existe
+    if (store.getProductsByCategory && typeof store.getProductsByCategory === 'function') {
+      return store.getProductsByCategory(category).length
+    }
+    // Fallback: contar manualmente
+    return store.products.filter(p => p.category === category).length
+  } catch (error) {
+    console.error('Erro ao contar produtos:', error)
+    return 0
+  }
+}
 
 const handleCategoryClick = (category: string) => {
-  console.log('Category clicked:', category);
-  // You can implement category filtering logic here
-};
+  // Redirecionar para a página de produtos com o filtro da categoria
+  router.push(`/products?category=${encodeURIComponent(category)}`)
+  // Scroll suave para o topo
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 </script>
 
 <style scoped>
 .categories {
   margin: 50px 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 30px;
+  color: var(--white-soft);
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: var(--gold-primary);
+  border-radius: 3px;
 }
 
 .categories-grid {
@@ -73,48 +118,103 @@ const handleCategoryClick = (category: string) => {
 }
 
 .category-card {
-  background: var(--white);
+  background: rgba(11, 11, 15, 0.6);
+  backdrop-filter: blur(10px);
   padding: 30px;
   text-align: center;
-  border-radius: 10px;
-  box-shadow: var(--shadow);
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
   transition: all 0.3s ease;
   cursor: pointer;
 }
 
 .category-card:hover {
   transform: translateY(-5px);
-  box-shadow: var(--shadow-hover);
+  border-color: var(--gold-primary);
+  box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2);
 }
 
 .category-icon {
   font-size: 3rem;
   margin-bottom: 15px;
+  transition: transform 0.3s ease;
+}
+
+.category-card:hover .category-icon {
+  transform: scale(1.1);
 }
 
 .category-card h3 {
   margin: 15px 0 10px;
-  color: var(--dark-color);
+  color: var(--white-soft);
   font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .category-count {
-  color: #666;
+  color: rgba(245, 240, 230, 0.6);
   margin-bottom: 20px;
   font-size: 0.9rem;
 }
 
 .category-btn {
-  background: linear-gradient(135deg, var(--secondary-color) 0%, #764ba2 100%);
-  color: var(--white);
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #b58f2a 100%);
+  color: var(--black-primary);
   border: none;
   padding: 8px 25px;
-  border-radius: 20px;
+  border-radius: 30px;
   cursor: pointer;
-  transition: transform 0.3s;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-size: 0.9rem;
 }
 
 .category-btn:hover {
   transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+}
+
+.no-categories {
+  text-align: center;
+  padding: 40px;
+  color: var(--white-soft);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .categories {
+    margin: 30px 0;
+  }
+  
+  .categories-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+  
+  .section-title {
+    font-size: 1.5rem;
+  }
+  
+  .category-card {
+    padding: 20px;
+  }
+  
+  .category-icon {
+    font-size: 2.5rem;
+  }
+  
+  .category-card h3 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .categories-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-card {
+    padding: 25px;
+  }
 }
 </style>
