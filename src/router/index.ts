@@ -13,6 +13,7 @@ import ProductsPage from '../views/ProductsPage.vue'
 import LoginPage from '../views/LoginPage.vue'
 import RegisterPage from '../views/RegisterPage.vue'
 import OrdersPage from '../views/OrdersPage.vue'
+import ProfilePage from '../views/ProfilePage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -28,6 +29,15 @@ const router = createRouter({
           meta: {
             title: 'Home - ShopHub',
             requiresAuth: false
+          }
+        },
+        {
+          path: 'profile',
+          name: 'profile',
+          component: ProfilePage,
+          meta: {
+            title: 'Meu Perfil - ShopHub',
+            requiresAuth: true
           }
         },
         {

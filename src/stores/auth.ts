@@ -129,12 +129,12 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   // Atualizar dados do usuário
-  const updateUser = (updatedUser: Partial<User>) => {
-    if (user.value) {
-      user.value = { ...user.value, ...updatedUser }
-      localStorage.setItem('auth_user', JSON.stringify(user.value))
-    }
+ const updateUser = (updatedUser: Partial<User>) => {
+  if (user.value) {
+    user.value = { ...user.value, ...updatedUser }
+    localStorage.setItem('auth_user', JSON.stringify(user.value))
   }
+}
 
   // Carregar usuário ao iniciar
   loadUser()
