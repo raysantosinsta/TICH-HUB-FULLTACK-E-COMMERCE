@@ -335,20 +335,28 @@ export class Order {
   /**
    * Gera um ID único para o pedido
    */
-  public static generateOrderId(userId?: number): string {
-    const now = new Date();
-    const parts = {
-      year: now.getFullYear(),
-      month: String(now.getMonth() + 1).padStart(2, "0"),
-      day: String(now.getDate()).padStart(2, "0"),
-      hours: String(now.getHours()).padStart(2, "0"),
-      minutes: String(now.getMinutes()).padStart(2, "0"),
-      seconds: String(now.getSeconds()).padStart(2, "0"),
-      random: Math.floor(Math.random() * 10000).toString().padStart(4, "0"),
-    };
+  // src/models/order.model.ts
 
-    return `ORD-${parts.year}${parts.month}${parts.day}-${parts.hours}${parts.minutes}${parts.seconds}-${parts.random}`;
+// Alterar o método generateOrderId para não usar o userId se não for necessário
+public static generateOrderId(userId?: number): string {
+  const now = new Date();
+  const parts = {
+    year: now.getFullYear(),
+    month: String(now.getMonth() + 1).padStart(2, "0"),
+    day: String(now.getDate()).padStart(2, "0"),
+    hours: String(now.getHours()).padStart(2, "0"),
+    minutes: String(now.getMinutes()).padStart(2, "0"),
+    seconds: String(now.getSeconds()).padStart(2, "0"),
+    random: Math.floor(Math.random() * 10000).toString().padStart(4, "0"),
+  };
+
+  // Se userId for fornecido, incluir no ID para melhor rastreabilidade
+  if (userId) {
+    return `ORD-${userId}-${parts.year}${parts.month}${parts.day}-${parts.hours}${parts.minutes}${parts.seconds}-${parts.random}`;
   }
+  
+  return `ORD-${parts.year}${parts.month}${parts.day}-${parts.hours}${parts.minutes}${parts.seconds}-${parts.random}`;
+}
 
   /**
    * Gera um código de rastreamento único

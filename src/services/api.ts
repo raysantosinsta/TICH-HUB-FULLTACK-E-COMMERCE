@@ -1,3 +1,5 @@
+// src/services/api.ts
+
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig, AxiosError } from 'axios';
 import { useAuthStore } from '../stores/auth';
 
@@ -80,11 +82,11 @@ axiosInstance.interceptors.response.use(
       try {
         // Tentar renovar o token (simulado)
         // Em um cenário real, você chamaria um endpoint de refresh token
-        const refreshToken = localStorage.getItem('refresh_token');
+        const storedRefreshToken = localStorage.getItem('refresh_token');
         
-        if (refreshToken) {
+        if (storedRefreshToken) {
           // Simular refresh token
-          // const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
+          // const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken: storedRefreshToken });
           // const newToken = response.data.token;
           
           // Simulação de novo token
@@ -278,7 +280,7 @@ export const api = {
   },
 
   // Refresh token (simulado)
-  async refreshToken(refreshToken: string): Promise<LoginResponse> {
+  async refreshToken(_refreshToken: string): Promise<LoginResponse> {
     try {
       // Simular refresh token
       await new Promise(resolve => setTimeout(resolve, 500));
