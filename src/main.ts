@@ -6,13 +6,11 @@ import ToastPlugin from './plugins/toast'
 import ConfirmPlugin from './plugins/confirm'
 import { setupPrimeVue } from './plugins/primevue'
 
-
-import './style.css'
+import './style.css'   // ← certifique-se que está importando aqui
 
 const app = createApp(App)
 const pinia = createPinia()
 
-// Configurar PrimeVue
 setupPrimeVue(app)
 
 app.use(pinia)

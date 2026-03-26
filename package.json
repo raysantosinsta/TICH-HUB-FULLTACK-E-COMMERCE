@@ -12,6 +12,7 @@
     "test:coverage": "vitest --coverage"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
     "@types/jest": "^30.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^25.5.0",
@@ -20,7 +21,10 @@
     "@vitest/ui": "^4.1.1",
     "@vue/test-utils": "^2.4.6",
     "@vue/vue3-jest": "^29.2.6",
+    "autoprefixer": "^10.4.27",
     "happy-dom": "^20.8.8",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
     "vite": "^8.0.1",
     "vitest": "^4.1.1"
