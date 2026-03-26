@@ -24,18 +24,6 @@ let toastServiceInstance: ToastService | null = null;
 // ========== MÉTODOS PRIVADOS ==========
 
 /**
- * Verifica se a instância do toast está inicializada
- * @returns true se a instância existe
- */
-const isToastReady = (): boolean => {
-  if (!toastServiceInstance) {
-    console.warn(TOAST_NOT_INITIALIZED);
-    return false;
-  }
-  return true;
-};
-
-/**
  * Cria um método de toast com validação
  * @param method - Nome do método a ser chamado
  * @returns Função que chama o método com validação
