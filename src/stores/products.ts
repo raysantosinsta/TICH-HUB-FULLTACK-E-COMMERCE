@@ -1,80 +1,220 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import { Product } from '../models/product.model'
-import type { ProductRating } from '../models/product.model'
+import { defineStore } from 'pinia';
+import { computed, ref } from 'vue';
+import { Product } from '../models/product.model';
 
 export const useProductsStore = defineStore('products', () => {
-  const products = ref<Product[]>([])
-  const loading = ref(false)
-  const error = ref<string | null>(null)
-  const selectedCategory = ref<string>('')
-
-  const fetchProducts = async () => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await fetch('https://fakestoreapi.com/products')
-      if (!response.ok) throw new Error('Erro ao carregar produtos')
-      const data = await response.json()
-      products.value = Product.fromAPIList(data)
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Erro desconhecido'
-      console.error('Erro:', err)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  const fetchProductsByCategory = async (category: string) => {
-    loading.value = true
-    error.value = null
-    
-    try {
-      const response = await fetch(`https://fakestoreapi.com/products/category/${category}`)
-      if (!response.ok) throw new Error('Erro ao carregar produtos')
-      const data = await response.json()
-      products.value = Product.fromAPIList(data)
-      selectedCategory.value = category
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Erro desconhecido'
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // Método para buscar produtos por categoria (filtra localmente)
-  const getProductsByCategory = (category: string): Product[] => {
-    return products.value.filter(p => p.category === category)
-  }
-
-  const getProductById = (id: number): Product | undefined => {
-    return products.value.find(p => p.id === id)
-  }
-
-  const featuredProducts = computed(() => products.value.slice(0, 8))
+  // ========== CONSTANTES ==========
+  const API_BASE_URL = 'https://fakestoreapi.com/products';
   
+  // ========== ESTADO ==========
+  const products = ref<Product[]>([]);
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  const selectedCategory = ref<string>('');
+
+  // ========== GETTERS ==========
+
+  /** Produtos em destaque (primeiros 8) */
+  const featuredProducts = computed(() => products.value.slice(0, 8));
+  
+  /** Lista única de categorias disponíveis */
   const categories = computed(() => {
-    const cats = [...new Set(products.value.map(p => p.category))]
-    return cats
-  })
-
+    return [...new Set(products.value.map(p => p.category))];
+  });
+  
+  /** Produtos filtrados pela categoria selecionada */
   const productsByCategory = computed(() => {
-    if (!selectedCategory.value) return products.value
-    return products.value.filter(p => p.category === selectedCategory.value)
-  })
+    if (!selectedCategory.value) return products.value;
+    return products.value.filter(p => p.category === selectedCategory.value);
+  });
+  
+  /** Total de produtos */
+  const totalProducts = computed(() => products.value.length);
+  
+  /** Verifica se há produtos */
+  const hasProducts = computed(() => products.value.length > 0);
+  
+  /** Produtos com desconto */
+  const discountedProducts = computed(() => {
+    return products.value.filter(p => p.hasDiscount());
+  });
+  
+  /** Produtos mais bem avaliados (top 10) */
+  const topRatedProducts = computed(() => {
+    return [...products.value]
+      .sort((a, b) => b.rating.rate - a.rating.rate)
+      .slice(0, 10);
+  });
 
+  // ========== MÉTODOS PRIVADOS ==========
+
+  /**
+   * Executa uma requisição fetch com tratamento de erro
+   * @param url - URL da requisição
+   * @returns Dados da resposta
+   */
+  const fetchFromAPI = async (url: string): Promise<any[]> => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Erro HTTP: ${response.status}`);
+    }
+    return response.json();
+  };
+
+  /**
+   * Processa os dados da API e atualiza o estado
+   * @param data - Dados da API
+   */
+  const processProductsData = (data: any[]): void => {
+    products.value = Product.fromAPIList(data);
+  };
+
+  /**
+   * Define o estado de erro
+   * @param err - Erro capturado
+   */
+  const setError = (err: unknown): void => {
+    error.value = err instanceof Error ? err.message : 'Erro desconhecido';
+    console.error('[ProductsStore] Erro:', err);
+  };
+
+  /**
+   * Limpa o estado de erro
+   */
+  const clearError = (): void => {
+    error.value = null;
+  };
+
+  // ========== MÉTODOS PÚBLICOS ==========
+
+  /**
+   * Busca todos os produtos da API
+   */
+  const fetchProducts = async (): Promise<void> => {
+    loading.value = true;
+    clearError();
+    
+    try {
+      const data = await fetchFromAPI(API_BASE_URL);
+      processProductsData(data);
+    } catch (err) {
+      setError(err);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * Busca produtos por categoria da API
+   * @param category - Categoria dos produtos
+   */
+  const fetchProductsByCategory = async (category: string): Promise<void> => {
+    loading.value = true;
+    clearError();
+    
+    try {
+      const url = `${API_BASE_URL}/category/${encodeURIComponent(category)}`;
+      const data = await fetchFromAPI(url);
+      processProductsData(data);
+      selectedCategory.value = category;
+    } catch (err) {
+      setError(err);
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * Filtra produtos por categoria (filtro local)
+   * @param category - Categoria dos produtos
+   */
+  const getProductsByCategory = (category: string): Product[] => {
+    return products.value.filter(p => p.category === category) as Product[];
+  };
+
+  /**
+   * Busca um produto pelo ID
+   * @param id - ID do produto
+   */
+  const getProductById = (id: number): Product | undefined => {
+    return products.value.find(p => p.id === id) as Product;
+  };
+
+  /**
+   * Busca produtos por termo de pesquisa (local)
+   * @param query - Termo de pesquisa
+   */
+  const searchProducts = (query: string): Product[] => {
+    const searchTerm = query.toLowerCase().trim();
+    if (!searchTerm) return products.value as Product[];
+    
+    return products.value.filter(product => 
+      product.title.toLowerCase().includes(searchTerm) ||
+      product.description.toLowerCase().includes(searchTerm) ||
+      product.category.toLowerCase().includes(searchTerm)
+    ) as Product[];
+  };
+
+  /**
+   * Define a categoria selecionada para filtro local
+   * @param category - Categoria a ser filtrada
+   */
+  const setSelectedCategory = (category: string): void => {
+    selectedCategory.value = category;
+  };
+
+  /**
+   * Limpa o filtro de categoria selecionada
+   */
+  const clearCategoryFilter = (): void => {
+    selectedCategory.value = '';
+  };
+
+  /**
+   * Limpa todos os produtos (útil para logout)
+   */
+  const clearProducts = (): void => {
+    products.value = [];
+    selectedCategory.value = '';
+    clearError();
+  };
+
+  /**
+   * Recarrega os produtos (refetch)
+   */
+  const refreshProducts = async (): Promise<void> => {
+    await fetchProducts();
+  };
+
+  // ========== INICIALIZAÇÃO ==========
+  // Os produtos são carregados sob demanda, não automaticamente
+
+  // ========== RETORNO ==========
   return {
+    // Estado
     products,
     loading,
     error,
     selectedCategory,
+    
+    // Getters
     featuredProducts,
     categories,
     productsByCategory,
+    totalProducts,
+    hasProducts,
+    discountedProducts,
+    topRatedProducts,
+    
+    // Actions
     fetchProducts,
     fetchProductsByCategory,
     getProductById,
-    getProductsByCategory 
-  }
-})
+    getProductsByCategory,
+    searchProducts,
+    setSelectedCategory,
+    clearCategoryFilter,
+    clearProducts,
+    refreshProducts,
+  };
+});

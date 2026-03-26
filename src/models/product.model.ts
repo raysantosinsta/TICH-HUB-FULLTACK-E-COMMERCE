@@ -1,18 +1,20 @@
 export interface ProductRating {
-  rate: number
-  count: number
+  rate: number;
+  count: number;
 }
 
 export class Product {
-  public id: number
-  public title: string
-  public price: number
-  public description: string
-  public category: string
-  public image: string
-  public rating: ProductRating
-  public discount?: number
+  // ========== PROPRIEDADES ==========
+  public readonly id: number;
+  public readonly title: string;
+  public readonly price: number;
+  public readonly description: string;
+  public readonly category: string;
+  public readonly image: string;
+  public readonly rating: ProductRating;
+  public readonly discount?: number;
 
+  // ========== CONSTRUTOR ==========
   constructor(
     id: number,
     title: string,
@@ -21,123 +23,234 @@ export class Product {
     category: string,
     image: string,
     rating: ProductRating,
-    discount?: number
+    discount?: number,
   ) {
-    this.id = id
-    this.title = title
+    this.id = id;
+    this.title = title;
+    this.description = description;
+    this.category = category;
+    this.image = image;
+    this.rating = rating;
+    this.discount = discount;
     this.price = price
-    this.description = description
-    this.category = category
-    this.image = image
-    this.rating = rating
-    this.discount = discount
   }
 
-  // Formatar preço para exibição
-  getFormattedPrice(): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(this.price)
+  // ========== GETTERS ==========
+
+  /** Preço formatado para exibição */
+  public get formattedPrice(): string {
+    return this.formatCurrency(this.price);
   }
 
-  // Formatar preço com desconto
-  getFormattedDiscountedPrice(): string {
-    const discountedPrice = this.getDiscountedPrice()
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(discountedPrice)
+  /** Preço com desconto calculado */
+  public get discountedPrice(): number {
+    return this.hasDiscount() ? this.price * (1 - this.discount!) : this.price;
   }
 
-  // Obter preço com desconto
-  getDiscountedPrice(): number {
-    if (this.discount) {
-      return this.price * (1 - this.discount)
-    }
-    return this.price
+  /** Preço com desconto formatado */
+  public get formattedDiscountedPrice(): string {
+    return this.formatCurrency(this.discountedPrice);
   }
 
-  // Obter desconto em porcentagem formatado
-  getFormattedDiscount(): string {
-    if (this.discount) {
-      return `${Math.round(this.discount * 100)}% OFF`
-    }
-    return ''
+  /** Desconto formatado em porcentagem */
+  public get formattedDiscount(): string {
+    return this.hasDiscount() ? `${Math.round(this.discount! * 100)}% OFF` : "";
   }
 
-  // Verificar se tem desconto
-  hasDiscount(): boolean {
-    return !!this.discount && this.discount > 0
-  }
-
-  // Obter avaliação em estrelas
-  getStarRating(): string {
-    const fullStars = Math.floor(this.rating.rate)
-    const hasHalfStar = this.rating.rate % 1 >= 0.5
-    let stars = ''
+  /** Avaliação em estrelas (★, ½, ☆) */
+  public get starRating(): string {
+    const { rate } = this.rating;
+    const fullStars = Math.floor(rate);
+    const hasHalfStar = rate % 1 >= 0.5;
     
-    for (let i = 0; i < fullStars; i++) stars += '★'
-    if (hasHalfStar) stars += '½'
-    for (let i = 0; i < 5 - Math.ceil(this.rating.rate); i++) stars += '☆'
+    const stars = "★".repeat(fullStars);
+    const halfStar = hasHalfStar ? "½" : "";
+    const emptyStars = "☆".repeat(5 - Math.ceil(rate));
     
-    return stars
+    return stars + halfStar + emptyStars;
   }
 
-  // Obter texto da categoria formatado
-  getFormattedCategory(): string {
-    const categories: Record<string, string> = {
+  /** Número de estrelas inteiras preenchidas */
+  public get fullStars(): number {
+    return Math.floor(this.rating.rate);
+  }
+
+  /** Verifica se tem meia estrela */
+  public get hasHalfStar(): boolean {
+    return this.rating.rate % 1 >= 0.5;
+  }
+
+  /** Número de estrelas vazias */
+  public get emptyStars(): number {
+    return 5 - Math.ceil(this.rating.rate);
+  }
+
+  /** Categoria formatada para exibição */
+  public get formattedCategory(): string {
+    const categoryMap: Record<string, string> = {
       "men's clothing": "Moda Masculina",
       "women's clothing": "Moda Feminina",
-      "jewelery": "Jóias",
-      "electronics": "Eletrônicos"
-    }
-    return categories[this.category] || this.category
+      jewelery: "Jóias",
+      electronics: "Eletrônicos",
+    };
+    return categoryMap[this.category] || this.category;
   }
 
-  // Truncar título
-  truncateTitle(length: number = 50): string {
-    if (this.title.length > length) {
-      return this.title.substring(0, length - 3) + '...'
-    }
-    return this.title
+  // ========== MÉTODOS PÚBLICOS (Compatibilidade) ==========
+
+  /**
+   * Formata o preço para exibição
+   */
+  public getFormattedPrice(): string {
+    return this.formattedPrice;
   }
 
-  // Truncar descrição
-  truncateDescription(length: number = 200): string {
-    if (this.description.length > length) {
-      return this.description.substring(0, length - 3) + '...'
-    }
-    return this.description
+  /**
+   * Formata o preço com desconto
+   */
+  public getFormattedDiscountedPrice(): string {
+    return this.formattedDiscountedPrice;
   }
 
-  // Calcular parcelamento
-  getInstallment(installments: number = 12): {
-    value: number
-    formattedValue: string
-    installments: number
+  /**
+   * Retorna o preço com desconto
+   */
+  public getDiscountedPrice(): number {
+    return this.discountedPrice;
+  }
+
+  /**
+   * Retorna o desconto formatado
+   */
+  public getFormattedDiscount(): string {
+    return this.formattedDiscount;
+  }
+
+  /**
+   * Verifica se o produto tem desconto
+   */
+  public hasDiscount(): boolean {
+    return !!this.discount && this.discount > 0;
+  }
+
+  /**
+   * Retorna a avaliação em estrelas
+   */
+  public getStarRating(): string {
+    return this.starRating;
+  }
+
+  /**
+   * Retorna a categoria formatada
+   */
+  public getFormattedCategory(): string {
+    return this.formattedCategory;
+  }
+
+  /**
+   * Trunca o título para o tamanho especificado
+   * @param length - Tamanho máximo (padrão: 50)
+   */
+  public truncateTitle(length: number = 50): string {
+    return this.truncateString(this.title, length);
+  }
+
+  /**
+   * Trunca a descrição para o tamanho especificado
+   * @param length - Tamanho máximo (padrão: 200)
+   */
+  public truncateDescription(length: number = 200): string {
+    return this.truncateString(this.description, length);
+  }
+
+  /**
+   * Calcula o parcelamento do produto
+   * @param installments - Número de parcelas (padrão: 12)
+   */
+  public getInstallment(installments: number = 12): {
+    value: number;
+    formattedValue: string;
+    installments: number;
   } {
-    const value = this.getDiscountedPrice() / installments
+    const value = this.discountedPrice / installments;
     return {
       value,
-      formattedValue: new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-      }).format(value),
-      installments
-    }
+      formattedValue: this.formatCurrency(value),
+      installments,
+    };
   }
 
-  // Converter para objeto simples (para salvar no localStorage)
-  toJSON(): {
-    id: number
-    title: string
-    price: number
-    description: string
-    category: string
-    image: string
-    rating: ProductRating
-    discount?: number
+  // ========== MÉTODOS PRIVADOS ==========
+
+  /**
+   * Formata um valor para moeda brasileira
+   * @param value - Valor a ser formatado
+   */
+  private formatCurrency(value: number): string {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  }
+
+  /**
+   * Trunca uma string para o tamanho especificado
+   * @param text - Texto a ser truncado
+   * @param maxLength - Tamanho máximo
+   */
+  private truncateString(text: string, maxLength: number): string {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength - 3) + "...";
+  }
+
+  // ========== MÉTODOS ESTÁTICOS ==========
+
+  /**
+   * Cria um produto a partir dos dados da API
+   * @param data - Dados do produto da API
+   */
+  public static fromAPI(data: {
+    id: number;
+    title: string;
+    price: number;
+    description: string;
+    category: string;
+    image: string;
+    rating?: { rate: number; count: number };
+    discount?: number;
+  }): Product {
+    return new Product(
+      data.id,
+      data.title,
+      data.price,
+      data.description,
+      data.category,
+      data.image,
+      data.rating ?? { rate: 0, count: 0 },
+      data.discount ?? 0,
+    );
+  }
+
+  /**
+   * Cria uma lista de produtos a partir dos dados da API
+   * @param dataList - Lista de dados da API
+   */
+  public static fromAPIList(dataList: any[]): Product[] {
+    return dataList.map((data) => Product.fromAPI(data));
+  }
+
+  /**
+   * Converte o produto para objeto simples (para salvar no localStorage)
+   */
+  public toJSON(): {
+    id: number;
+    title: string;
+    price: number;
+    description: string;
+    category: string;
+    image: string;
+    rating: ProductRating;
+    discount?: number;
   } {
     return {
       id: this.id,
@@ -147,26 +260,7 @@ export class Product {
       category: this.category,
       image: this.image,
       rating: this.rating,
-      discount: this.discount
-    }
-  }
-
-  // Criar produto a partir de dados da API
-  static fromAPI(data: any): Product {
-    return new Product(
-      data.id,
-      data.title,
-      data.price,
-      data.description,
-      data.category,
-      data.image,
-      data.rating || { rate: 0, count: 0 },
-      data.discount || 0
-    )
-  }
-
-  // Criar lista de produtos a partir da API
-  static fromAPIList(dataList: any[]): Product[] {
-    return dataList.map(data => Product.fromAPI(data))
+      discount: this.discount,
+    };
   }
 }

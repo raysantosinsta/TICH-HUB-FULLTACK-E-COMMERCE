@@ -6,115 +6,212 @@ export interface CartItem {
 }
 
 export class Cart {
-  public items: CartItem[];
+  private _items: CartItem[];
 
   constructor(items: CartItem[] = []) {
-    this.items = items;
+    this._items = items;
   }
 
-  // Adicionar item ao carrinho
-  addItem(product: Product, quantity: number = 1): void {
-    const existingItem = this.items.find(
-      (item) => item.product.id === product.id,
-    );
-
-    if (existingItem) {
-      existingItem.quantity += quantity;
-    } else {
-      this.items.push({ product, quantity });
-    }
+  // ========== GETTERS ==========
+  
+  /** Retorna todos os itens do carrinho (cópia) */
+  public get items(): CartItem[] {
+    return [...this._items];
   }
 
-  // Remover item do carrinho
-  removeItem(productId: number): void {
-    this.items = this.items.filter((item) => item.product.id !== productId);
+  /** Retorna os itens internos (para compatibilidade) */
+  public get itemsArray(): CartItem[] {
+    return this._items;
   }
 
-  // Atualizar quantidade de um item
-  updateQuantity(productId: number, quantity: number): void {
-    const item = this.items.find((item) => item.product.id === productId);
-    if (item) {
-      if (quantity <= 0) {
-        this.removeItem(productId);
-      } else {
-        item.quantity = quantity;
-      }
-    }
+  /** Verifica se o carrinho está vazio */
+  public get isEmpty(): boolean {
+    return this._items.length === 0;
   }
 
-  // Limpar todo o carrinho
-  clearCart(): void {
-    this.items = [];
+  /** Calcula o total de itens no carrinho */
+  public get totalItems(): number {
+    return this._items.reduce((total, item) => total + item.quantity, 0);
   }
 
-  // Verificar se produto existe no carrinho
-  hasProduct(productId: number): boolean {
-    return this.items.some((item) => item.product.id === productId);
-  }
-
-  // Obter quantidade de um produto específico
-  getQuantity(productId: number): number {
-    const item = this.items.find((item) => item.product.id === productId);
-    return item?.quantity || 0;
-  }
-
-  // Calcular total de itens
-  getTotalItems(): number {
-    return this.items.reduce((total, item) => total + item.quantity, 0);
-  }
-
-  // Calcular subtotal (soma dos preços sem descontos)
-  getSubtotal(): number {
-    return this.items.reduce(
+  /** Calcula o subtotal (soma dos preços sem descontos) */
+  public get subtotal(): number {
+    return this._items.reduce(
       (total, item) => total + item.product.price * item.quantity,
       0,
     );
   }
 
-  // Calcular desconto total (se tiver desconto no produto)
-  getTotalDiscount(): number {
-    return this.items.reduce((total, item) => {
+  /** Calcula o desconto total aplicado */
+  public get totalDiscount(): number {
+    return this._items.reduce((total, item) => {
       const discount = (item.product.discount || 0) * item.product.price;
       return total + discount * item.quantity;
     }, 0);
   }
 
-  // Calcular total com desconto
-  getTotalWithDiscount(): number {
-    return this.getSubtotal() - this.getTotalDiscount();
+  /** Calcula o total com descontos aplicados */
+  public get total(): number {
+    return this.subtotal - this.totalDiscount;
   }
 
-  // Obter todos os itens
-  getAllItems(): CartItem[] {
-    return [...this.items];
+  // ========== MÉTODOS PÚBLICOS ==========
+
+  /**
+   * Adiciona um produto ao carrinho
+   * @param product - Produto a ser adicionado
+   * @param quantity - Quantidade (padrão: 1)
+   */
+  public addItem(product: Product, quantity: number = 1): void {
+    if (quantity <= 0) return;
+
+    const existingItem = this.findItemByProductId(product.id);
+
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      this._items.push({ product, quantity });
+    }
   }
 
-  // Criar cópia do carrinho
-  clone(): Cart {
-    return new Cart(
-      this.items.map((item) => ({
-        product: { ...item.product },
-        quantity: item.quantity,
-      })),
-    );
+  /**
+   * Remove um produto do carrinho pelo ID
+   * @param productId - ID do produto a ser removido
+   */
+  public removeItem(productId: number): void {
+    this._items = this._items.filter((item) => item.product.id !== productId);
   }
 
-  // Mesclar com outro carrinho (útil para login)
-  mergeWith(otherCart: Cart): void {
-    otherCart.items.forEach((item) => {
+  /**
+   * Atualiza a quantidade de um produto no carrinho
+   * @param productId - ID do produto
+   * @param quantity - Nova quantidade
+   */
+  public updateQuantity(productId: number, quantity: number): void {
+    const item = this.findItemByProductId(productId);
+    
+    if (!item) return;
+
+    if (quantity <= 0) {
+      this.removeItem(productId);
+    } else {
+      item.quantity = quantity;
+    }
+  }
+
+  /** Remove todos os itens do carrinho */
+  public clearCart(): void {
+    this._items = [];
+  }
+
+  /**
+   * Verifica se um produto está no carrinho
+   * @param productId - ID do produto
+   */
+  public hasProduct(productId: number): boolean {
+    return this.findItemByProductId(productId) !== undefined;
+  }
+
+  /**
+   * Obtém a quantidade de um produto no carrinho
+   * @param productId - ID do produto
+   */
+  public getQuantity(productId: number): number {
+    const item = this.findItemByProductId(productId);
+    return item?.quantity ?? 0;
+  }
+
+  /**
+   * Obtém um item do carrinho pelo ID do produto
+   * @param productId - ID do produto
+   */
+  public getItem(productId: number): CartItem | undefined {
+    return this.findItemByProductId(productId);
+  }
+
+  /** Retorna todos os itens do carrinho */
+  public getAllItems(): CartItem[] {
+    return [...this._items];
+  }
+
+  // ========== MÉTODOS DE COMPATIBILIDADE (alias) ==========
+
+  /** @deprecated Use `totalItems` getter */
+  public getTotalItems(): number {
+    return this.totalItems;
+  }
+
+  /** @deprecated Use `subtotal` getter */
+  public getSubtotal(): number {
+    return this.subtotal;
+  }
+
+  /** @deprecated Use `totalDiscount` getter */
+  public getTotalDiscount(): number {
+    return this.totalDiscount;
+  }
+
+  /** @deprecated Use `total` getter */
+  public getTotalWithDiscount(): number {
+    return this.total;
+  }
+
+  /**
+   * Mescla este carrinho com outro
+   * @param otherCart - Outro carrinho a ser mesclado
+   */
+  public mergeWith(otherCart: Cart): void {
+    otherCart.getAllItems().forEach((item) => {
       this.addItem(item.product, item.quantity);
     });
   }
 
-  // Converter para objeto simples (para salvar no localStorage)
-  toJSON(): { items: CartItem[] } {
-    return {
-      items: this.items,
-    };
+  /** Cria uma cópia profunda do carrinho */
+  public clone(): Cart {
+    const clonedItems = this._items.map((item) => ({
+      product: { ...item.product },
+      quantity: item.quantity,
+    }));
+    return new Cart(clonedItems);
   }
 
-  // Criar carrinho a partir de objeto salvo
-  static fromJSON(data: { items: CartItem[] }): Cart {
+  // ========== MÉTODOS DE UTILIDADE ==========
+
+  /** Converte o carrinho para JSON (para salvar no localStorage) */
+  public toJSON(): { items: CartItem[] } {
+    return { items: this._items };
+  }
+
+  /** Retorna uma representação em string do carrinho */
+  public toString(): string {
+    return JSON.stringify(this.toJSON());
+  }
+
+  // ========== MÉTODOS PRIVADOS ==========
+
+  /**
+   * Busca um item no carrinho pelo ID do produto
+   * @param productId - ID do produto
+   * @returns O item encontrado ou undefined
+   */
+  private findItemByProductId(productId: number): CartItem | undefined {
+    return this._items.find((item) => item.product.id === productId);
+  }
+
+  // ========== MÉTODOS ESTÁTICOS ==========
+
+  /**
+   * Cria um carrinho a partir de um objeto salvo
+   * @param data - Objeto com os dados do carrinho
+   */
+  public static fromJSON(data: { items: CartItem[] }): Cart {
     return new Cart(data.items);
+  }
+
+  /**
+   * Cria um carrinho vazio
+   */
+  public static createEmpty(): Cart {
+    return new Cart([]);
   }
 }
