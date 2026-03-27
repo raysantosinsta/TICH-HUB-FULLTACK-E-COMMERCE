@@ -163,15 +163,7 @@
             </router-link>
           </div>
 
-          <div class="test-credentials-split">
-            <div class="credential-badge-split">
-              <span>🔐 Credenciais de teste</span>
-              <div class="credential-list-split">
-                <code>user@test.com / 123456</code>
-                <code>admin@test.com / admin123</code>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
     </div>
@@ -179,14 +171,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
 import { useToast } from '../plugins/toast'
+import { supabase } from '../lib/supabase'
 
 const router = useRouter()
 const route = useRoute()
-const authStore = useAuthStore()
 const toast = useToast()
 
 // Form data
@@ -225,17 +216,18 @@ const slides = [
   }
 ]
 
-// Mouse glow effect
+// Mouse glow
 const handleMouseMove = (e: MouseEvent) => {
   if (mouseGlowForm.value) {
     const rect = mouseGlowForm.value.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    mouseGlowForm.value.style.background = `radial-gradient(circle 400px at ${x}px ${y}px, rgba(212, 175, 55, 0.12), transparent 80%)`
+    mouseGlowForm.value.style.background =
+      `radial-gradient(circle 400px at ${x}px ${y}px, rgba(212, 175, 55, 0.12), transparent 80%)`
   }
 }
 
-// Slideshow functions
+// Slideshow
 const nextSlide = () => {
   currentSlide.value = (currentSlide.value + 1) % slides.length
 }
@@ -246,96 +238,108 @@ const goToSlide = (index: number) => {
 }
 
 const resetInterval = () => {
-  if (slideInterval) {
-    clearInterval(slideInterval)
-  }
-  slideInterval = window.setInterval(nextSlide, 3000) // 1 segundo
+  if (slideInterval) clearInterval(slideInterval)
+  slideInterval = window.setInterval(nextSlide, 3000)
 }
 
-onMounted(() => {
-  if (authStore.isAuthenticated) {
-    const redirectTo = route.query.redirect as string || '/'
-    router.push(redirectTo)
-  }
-  
-  const savedEmail = localStorage.getItem('remembered_email')
-  if (savedEmail) {
-    email.value = savedEmail
-    rememberMe.value = true
-  }
-  
-  // Start slideshow
-  resetInterval()
-  
-  // Add mouse move listener for glow effect
-  const formSide = document.querySelector('.form-side')
-  if (formSide) {
-    formSide.addEventListener('mousemove', handleMouseMove)
-  }
-})
-
-onUnmounted(() => {
-  if (slideInterval) {
-    clearInterval(slideInterval)
-  }
-  const formSide = document.querySelector('.form-side')
-  if (formSide) {
-    formSide.removeEventListener('mousemove', handleMouseMove)
-  }
-})
-
+// LOGIN SUPABASE
 const handleLogin = async () => {
   if (!email.value || !password.value) {
-    errorMessage.value = 'Por favor, preencha todos os campos'
+    errorMessage.value = 'Preencha todos os campos'
     return
   }
-  
+
   loading.value = true
   errorMessage.value = ''
-  
+
   try {
-    const result = await authStore.login(email.value, password.value)
-    
-    if (result.success) {
-      if (rememberMe.value) {
-        localStorage.setItem('remembered_email', email.value)
-      } else {
-        localStorage.removeItem('remembered_email')
-      }
-      
-      toast.success('Login realizado!', 'Bem-vindo de volta ao ShopHub.', 3000)
-      
-      const redirectTo = route.query.redirect as string || '/'
-      router.push(redirectTo)
-    } else {
-      errorMessage.value = result.message || 'Email ou senha inválidos'
-      toast.error('Erro no login', errorMessage.value, 3000)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value
+    })
+
+    if (error) {
+      errorMessage.value = error.message
+      toast.error('Erro no login', error.message, 3000)
+      return
     }
+
+    // lembrar email
+    if (rememberMe.value) {
+      localStorage.setItem('remembered_email', email.value)
+    } else {
+      localStorage.removeItem('remembered_email')
+    }
+
+    toast.success(
+      'Login realizado!',
+      'Bem-vindo ao ShopHub',
+      3000
+    )
+
+    const redirectTo = route.query.redirect as string || '/'
+    router.push(redirectTo)
+
   } catch (error) {
-    console.error('Erro no login:', error)
-    errorMessage.value = 'Erro ao conectar com o servidor. Tente novamente.'
-    toast.error('Erro', errorMessage.value, 3000)
+    errorMessage.value = 'Erro ao fazer login'
+    toast.error('Erro', 'Erro ao conectar com servidor', 3000)
   } finally {
     loading.value = false
   }
 }
 
-const handleForgotPassword = () => {
-  toast.info(
-    'Recuperar senha', 
-    'Funcionalidade em desenvolvimento. Em breve você poderá recuperar sua senha.', 
-    3000
-  )
+// Reset password
+const handleForgotPassword = async () => {
+  if (!email.value) {
+    toast.info(
+      'Informe o email',
+      'Digite seu email para recuperar senha',
+      3000
+    )
+    return
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email.value)
+
+  if (error) {
+    toast.error('Erro', error.message, 3000)
+  } else {
+    toast.success(
+      'Email enviado',
+      'Verifique sua caixa de entrada',
+      3000
+    )
+  }
 }
 
-// Watch para limpar erro
-import { watch } from 'vue'
-watch([email, password], () => {
-  if (errorMessage.value) {
-    errorMessage.value = ''
+onMounted(() => {
+
+  const savedEmail = localStorage.getItem('remembered_email')
+  if (savedEmail) {
+    email.value = savedEmail
+    rememberMe.value = true
   }
+
+  resetInterval()
+
+  const formSide = document.querySelector('.form-side')
+  formSide?.addEventListener('mousemove', handleMouseMove)
 })
+
+onUnmounted(() => {
+  if (slideInterval) clearInterval(slideInterval)
+
+  const formSide = document.querySelector('.form-side')
+  formSide?.removeEventListener('mousemove', handleMouseMove)
+})
+
+// limpar erro
+watch([email, password], () => {
+  errorMessage.value = ''
+})
+
 </script>
+
 
 <style scoped>
 /* ========== LOGIN SPLIT PREMIUM ========== */

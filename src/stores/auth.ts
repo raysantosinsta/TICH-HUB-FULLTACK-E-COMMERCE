@@ -1,246 +1,277 @@
-import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
-import authService, { verifyToken } from '../services/auth.service';
+import { defineStore } from 'pinia'
+import { computed, ref } from 'vue'
+import { supabase } from '../lib/supabase'
 
 export interface User {
-  id: number;
-  name: string;
-  email: string;
-  role: string;
+  id: string
+  name: string
+  email: string
+  role: string
 }
 
 export const useAuthStore = defineStore('auth', () => {
+
   // ========== ESTADO ==========
-  const token = ref<string | null>(null);
-  const user = ref<User | null>(null);
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+  const user = ref<User | null>(null)
+  const loading = ref(true)
+  const error = ref<string | null>(null)
 
   // ========== GETTERS ==========
 
-  /** Verifica se o usuário está autenticado */
-  const isAuthenticated = computed(() => !!token.value && !!user.value);
-  
-  /** Papel do usuário (role) */
-  const userRole = computed(() => user.value?.role || 'guest');
-  
-  /** Nome do usuário */
-  const userName = computed(() => user.value?.name || '');
-  
-  /** Email do usuário */
-  const userEmail = computed(() => user.value?.email || '');
-  
-  /** ID do usuário */
-  const userId = computed(() => user.value?.id || null);
-  
-  /** Alias para loading (compatibilidade) */
-  const isLoading = computed(() => loading.value);
+  const isAuthenticated = computed(() => !!user.value)
+  const userRole = computed(() => user.value?.role || 'guest')
+  const userName = computed(() => user.value?.name || '')
+  const userEmail = computed(() => user.value?.email || '')
+  const userId = computed(() => user.value?.id || null)
+  const isLoading = computed(() => loading.value)
 
-  // ========== MÉTODOS PRIVADOS (Helpers) ==========
+  // ========== HELPERS ==========
 
-  /**
-   * Salva os dados de autenticação no localStorage
-   */
-  const saveToStorage = (authToken: string, userData: User): void => {
-    localStorage.setItem('auth_token', authToken);
-    localStorage.setItem('auth_user', JSON.stringify(userData));
-  };
-
-  /**
-   * Limpa os dados de autenticação do localStorage
-   */
-  const clearStorage = (): void => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-  };
-
-  /**
-   * Dispara um evento customizado
-   */
   const dispatchEvent = <T>(eventName: string, detail?: T): void => {
-    window.dispatchEvent(new CustomEvent(eventName, { detail }));
-  };
+    window.dispatchEvent(new CustomEvent(eventName, { detail }))
+  }
 
-  /**
-   * Define o estado de autenticação
-   */
-  const setAuthState = (authToken: string, userData: User): void => {
-    token.value = authToken;
-    user.value = userData;
-    saveToStorage(authToken, userData);
-  };
-
-  /**
-   * Limpa o estado de autenticação
-   */
   const clearAuthState = (): void => {
-    token.value = null;
-    user.value = null;
-    error.value = null;
-    clearStorage();
-  };
+    user.value = null
+    error.value = null
+  }
+
+  // ========== MÉTODOS ==========
 
   /**
-   * Gerencia erros de forma consistente
+   * Carregar usuário
    */
-  const handleError = (err: unknown, defaultMessage: string): string => {
-    console.error(defaultMessage, err);
-    error.value = defaultMessage;
-    return defaultMessage;
-  };
+  const loadUser = async (): Promise<void> => {
 
-  /**
-   * Processa a resposta de autenticação
-   */
-  const processAuthResponse = (response: {
-    success: boolean;
-    token?: string;
-    user?: User;
-    message?: string;
-  }): { success: boolean; message?: string } => {
-    if (response.success && response.token && response.user) {
-      setAuthState(response.token, response.user);
-      dispatchEvent('user-login', { userId: response.user.id });
-      return { success: true };
-    }
-    
-    const errorMsg = response.message || 'Erro na autenticação';
-    error.value = errorMsg;
-    return { success: false, message: errorMsg };
-  };
+    try {
 
-  // ========== MÉTODOS PÚBLICOS ==========
+      const { data } = await supabase.auth.getSession()
 
-  /**
-   * Carrega os dados do usuário do localStorage
-   */
-  const loadUser = (): void => {
-    const savedToken = localStorage.getItem('auth_token');
-    const savedUser = localStorage.getItem('auth_user');
-    
-    if (savedToken && savedUser) {
-      try {
-        token.value = savedToken;
-        user.value = JSON.parse(savedUser);
-        
-        // Verificar se o token ainda é válido
-        const decoded = verifyToken(savedToken);
-        if (!decoded) {
-          logout();
+      const session = data.session
+
+      if (session?.user) {
+
+        user.value = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || 'Usuário',
+          role: session.user.user_metadata?.role || 'user'
         }
-      } catch (err) {
-        console.error('Erro ao carregar usuário:', err);
-        clearAuthState();
+
+      } else {
+
+        user.value = null
+
       }
-    }
-  };
 
-  /**
-   * Realiza login do usuário
-   */
-  const login = async (email: string, password: string): Promise<{ success: boolean; message?: string }> => {
-    loading.value = true;
-    error.value = null;
-    
-    try {
-      const response = await authService.login(email, password);
-      return processAuthResponse(response);
     } catch (err) {
-      const message = handleError(err, 'Erro ao conectar com o servidor');
-      return { success: false, message };
+
+      console.error('Erro ao carregar usuário:', err)
+      clearAuthState()
+
     } finally {
-      loading.value = false;
+
+      loading.value = false
+
     }
-  };
+
+  }
 
   /**
-   * Realiza registro de novo usuário
+   * Inicializar auth
    */
-  const register = async (name: string, email: string, password: string): Promise<{ success: boolean; message?: string }> => {
-    loading.value = true;
-    error.value = null;
-    
+  const init = async () => {
+
+    await loadUser()
+
+    supabase.auth.onAuthStateChange((_event, session) => {
+
+      if (session?.user) {
+
+        user.value = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || 'Usuário',
+          role: session.user.user_metadata?.role || 'user'
+        }
+
+      } else {
+
+        user.value = null
+
+      }
+
+    })
+
+  }
+
+  /**
+   * Login
+   */
+  const login = async (email: string, password: string) => {
+
+    loading.value = true
+    error.value = null
+
     try {
-      const response = await authService.register({ name, email, password });
-      return processAuthResponse(response);
-    } catch (err) {
-      const message = handleError(err, 'Erro ao conectar com o servidor');
-      return { success: false, message };
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      })
+
+      if (error) throw error
+
+      await loadUser()
+
+      dispatchEvent('user-login', {
+        userId: data.user?.id
+      })
+
+      return { success: true }
+
+    } catch (err: any) {
+
+      const message = err.message || 'Erro ao fazer login'
+      error.value = message
+
+      return {
+        success: false,
+        message
+      }
+
     } finally {
-      loading.value = false;
+
+      loading.value = false
+
     }
-  };
+
+  }
 
   /**
-   * Realiza logout do usuário
+   * Registro
    */
-  const logout = (): void => {
-    const userId = user.value?.id;
-    clearAuthState();
-    dispatchEvent('user-logout', { userId });
-  };
+  const register = async (
+    name: string,
+    email: string,
+    password: string
+  ) => {
 
-  /**
-   * Retorna o token atual
-   */
-  const getToken = (): string | null => token.value;
+    loading.value = true
+    error.value = null
 
-  /**
-   * Verifica se o token é válido
-   */
-  const isTokenValid = (): boolean => {
-    if (!token.value) return false;
-    const decoded = verifyToken(token.value);
-    return !!decoded;
-  };
+    try {
 
-  /**
-   * Atualiza os dados do usuário
-   */
-  const updateUser = (updatedUser: Partial<User>): void => {
-    if (user.value) {
-      user.value = { ...user.value, ...updatedUser };
-      localStorage.setItem('auth_user', JSON.stringify(user.value));
-      dispatchEvent('user-updated', { user: user.value });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            role: 'user'
+          }
+        }
+      })
+
+      if (error) throw error
+
+      await loadUser()
+
+      dispatchEvent('user-login', {
+        userId: data.user?.id
+      })
+
+      return { success: true }
+
+    } catch (err: any) {
+
+      const message = err.message || 'Erro ao registrar'
+
+      error.value = message
+
+      return {
+        success: false,
+        message
+      }
+
+    } finally {
+
+      loading.value = false
+
     }
-  };
+
+  }
 
   /**
-   * Limpa todos os dados do usuário (útil quando a conta é excluída)
+   * Logout
    */
-  const clearUserData = (): void => {
-    const userId = user.value?.id;
-    clearAuthState();
-    dispatchEvent('user-data-clear', { userId });
-  };
+  const logout = async () => {
 
-  // ========== INICIALIZAÇÃO ==========
-  loadUser();
+  const userId = user.value?.id
 
-  // ========== RETORNO ==========
+  try {
+    await supabase.auth.signOut()
+  } catch (error) {
+    console.error('Erro ao sair:', error)
+  }
+
+  clearAuthState()
+
+  dispatchEvent('user-logout', { userId })
+
+}
+
+
+  /**
+   * Atualizar usuário
+   */
+  const updateUser = async (updatedUser: Partial<User>) => {
+
+    if (!user.value) return
+
+    await supabase.auth.updateUser({
+      data: updatedUser
+    })
+
+    user.value = {
+      ...user.value,
+      ...updatedUser
+    }
+
+    dispatchEvent('user-updated', {
+      user: user.value
+    })
+
+  }
+
+  /**
+   * Limpar dados
+   */
+  const clearUserData = () => {
+   clearAuthState()
+  }
+
   return {
-    // Estado
-    token,
+
     user,
     loading,
     error,
-    
-    // Computed
+
     isAuthenticated,
     userRole,
     userName,
     userEmail,
     userId,
     isLoading,
-    
-    // Actions
+
+    init,
     loadUser,
     login,
     register,
     logout,
-    getToken,
-    isTokenValid,
     updateUser,
-    clearUserData,
-  };
-});
+    clearUserData
+
+  }
+
+})

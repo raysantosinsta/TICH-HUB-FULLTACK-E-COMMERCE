@@ -217,11 +217,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { supabase } from '../lib/supabase'
 import { useToast } from '../plugins/toast'
 
 const router = useRouter()
-const authStore = useAuthStore()
 const toast = useToast()
 
 // Form data
@@ -235,7 +234,7 @@ const loading = ref(false)
 const errorMessage = ref('')
 const mouseGlowForm = ref<HTMLElement | null>(null)
 
-// Slideshow data
+// Slideshow
 const currentSlide = ref(0)
 let slideInterval: number | null = null
 
@@ -266,17 +265,18 @@ const slides = [
   }
 ]
 
-// Mouse glow effect
+// Mouse glow
 const handleMouseMove = (e: MouseEvent) => {
   if (mouseGlowForm.value) {
     const rect = mouseGlowForm.value.getBoundingClientRect()
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
-    mouseGlowForm.value.style.background = `radial-gradient(circle 400px at ${x}px ${y}px, rgba(212, 175, 55, 0.12), transparent 80%)`
+    mouseGlowForm.value.style.background =
+      `radial-gradient(circle 400px at ${x}px ${y}px, rgba(212, 175, 55, 0.12), transparent 80%)`
   }
 }
 
-// Slideshow functions
+// Slideshow
 const nextSlide = () => {
   currentSlide.value = (currentSlide.value + 1) % slides.length
 }
@@ -290,65 +290,87 @@ const resetInterval = () => {
   if (slideInterval) {
     clearInterval(slideInterval)
   }
-  slideInterval = window.setInterval(nextSlide, 3000) // 3 segundos
+  slideInterval = window.setInterval(nextSlide, 3000)
 }
 
 const handleRegister = async () => {
   errorMessage.value = ''
-  
+
   if (!name.value || !email.value || !password.value || !confirmPassword.value) {
-    errorMessage.value = 'Por favor, preencha todos os campos'
+    errorMessage.value = 'Preencha todos os campos'
     return
   }
-  
+
   if (password.value !== confirmPassword.value) {
-    errorMessage.value = 'As senhas não coincidem'
+    errorMessage.value = 'Senhas não coincidem'
     return
   }
-  
-  if (password.value.length < 6) {
-    errorMessage.value = 'A senha deve ter pelo menos 6 caracteres'
-    return
-  }
-  
+
   loading.value = true
-  
+
   try {
-    const result = await authStore.register(name.value, email.value, password.value)
-    
-    if (result.success) {
-      toast.success('Conta criada!', 'Bem-vindo ao ShopHub. Faça login para continuar.', 3000)
-      router.push('/login')
-    } else {
-      errorMessage.value = result.message || 'Erro ao criar conta'
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.value,
+      password: password.value,
+      options: {
+        data: {
+          name: name.value
+        }
+      }
+    })
+
+    if (error) {
+      errorMessage.value = error.message
+      return
     }
+
+    // 👇 Se precisa confirmar email
+    if (!data.session) {
+      toast.success(
+        'Conta criada!',
+        'Verifique seu email para confirmar sua conta',
+        4000
+      )
+
+      router.push('/login')
+      return
+    }
+
+    // 👇 Se já logou automaticamente
+    toast.success(
+      'Conta criada!',
+      'Bem-vindo ao ShopHub 🎉',
+      3000
+    )
+
+    router.push('/')
+
   } catch (error) {
-    console.error('Erro no registro:', error)
-    errorMessage.value = 'Erro ao conectar com o servidor. Tente novamente.'
+    errorMessage.value = 'Erro ao criar conta'
   } finally {
     loading.value = false
   }
 }
 
+
 onMounted(() => {
   resetInterval()
-  
+
   const formSide = document.querySelector('.form-side-register')
-  if (formSide) {
-    formSide.addEventListener('mousemove', handleMouseMove)
-  }
+  formSide?.addEventListener('mousemove', handleMouseMove)
 })
 
 onUnmounted(() => {
   if (slideInterval) {
     clearInterval(slideInterval)
   }
+
   const formSide = document.querySelector('.form-side-register')
-  if (formSide) {
-    formSide.removeEventListener('mousemove', handleMouseMove)
-  }
+  formSide?.removeEventListener('mousemove', handleMouseMove)
 })
 </script>
+
 
 <style scoped>
 /* ========== REGISTER SPLIT PREMIUM ========== */

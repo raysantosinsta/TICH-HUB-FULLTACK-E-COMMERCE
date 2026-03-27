@@ -5,8 +5,9 @@ import App from './App.vue'
 import ToastPlugin from './plugins/toast'
 import ConfirmPlugin from './plugins/confirm'
 import { setupPrimeVue } from './plugins/primevue'
+import { useAuthStore } from './stores/auth'
 
-import './style.css'   // ← certifique-se que está importando aqui
+import './style.css'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -17,5 +18,9 @@ app.use(pinia)
 app.use(router)
 app.use(ToastPlugin)
 app.use(ConfirmPlugin)
+
+// Inicializar autenticação
+const auth = useAuthStore()
+auth.init()
 
 app.mount('#app')
