@@ -1,28 +1,32 @@
 <template>
   <div class="favorite-wrapper-premium">
-    <button 
+    <button
       class="favorite-btn-premium"
-      :class="{ active: isFavorited, animated: isAnimating, 'btn-disabled-premium': !isAuthenticated }"
+      :class="{
+        active: isFavorited,
+        animated: isAnimating,
+        'btn-disabled-premium': !isAuthenticated,
+      }"
       @click="handleFavorite"
       :disabled="disabled || !isAuthenticated"
     >
       <div class="btn-glow-premium"></div>
-      <svg 
-        class="heart-icon-premium" 
-        viewBox="0 0 24 24" 
-        fill="none" 
+      <svg
+        class="heart-icon-premium"
+        viewBox="0 0 24 24"
+        fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <path 
+        <path
           d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z"
           fill="currentColor"
         />
       </svg>
       <span v-if="showText" class="favorite-text-premium">
-        {{ isFavorited ? 'Favoritado' : 'Favoritar' }}
+        {{ isFavorited ? "Favoritado" : "Favoritar" }}
       </span>
     </button>
-    
+
     <!-- Tooltip Premium para usuários não logados -->
     <div v-if="!isAuthenticated" class="tooltip-premium-favorite">
       <div class="tooltip-content-premium">
@@ -35,73 +39,77 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useFavoritesStore } from '../stores/favorites'
-import { useAuthStore } from '../stores/auth'
-import { useToast } from '../plugins/toast'
-import type { Product } from '../types'
+import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useFavoritesStore } from "../stores/favorites";
+import { useAuthStore } from "../stores/auth";
+import { useToast } from "../plugins/toast";
+import type { Product } from "../types";
 
 const props = defineProps<{
-  product: Product
-  showText?: boolean
-  disabled?: boolean
-}>()
+  product: Product;
+  showText?: boolean;
+  disabled?: boolean;
+}>();
 
 const emit = defineEmits<{
-  (e: 'update', isFavorited: boolean): void
-}>()
+  (e: "update", isFavorited: boolean): void;
+}>();
 
-const router = useRouter()
-const favoritesStore = useFavoritesStore()
-const authStore = useAuthStore()
-const toast = useToast()
-const isAnimating = ref(false)
+const router = useRouter();
+const favoritesStore = useFavoritesStore();
+const authStore = useAuthStore();
+const toast = useToast();
+const isAnimating = ref(false);
 
-const isAuthenticated = computed(() => authStore.isAuthenticated)
-const isFavorited = computed(() => favoritesStore.isFavorite(props.product.id))
+const isAuthenticated = computed(() => authStore.isAuthenticated);
+const isFavorited = computed(() => favoritesStore.isFavorite(props.product.id));
 
 const handleFavorite = async () => {
-  if (props.disabled) return
-  
+  if (props.disabled) return;
+
   // Verificar se usuário está logado
   if (!isAuthenticated.value) {
     toast.warning(
-      'Login necessário',
-      'Faça login para adicionar produtos aos favoritos.',
-      4000
-    )
+      "Login necessário",
+      "Faça login para adicionar produtos aos favoritos.",
+      4000,
+    );
+    // CORREÇÃO: Redirecionar para login com redirect para favoritos
     setTimeout(() => {
-      router.push('/login')
-    }, 1500)
-    return
+      router.push({
+        path: "/login",
+        query: { redirect: "/favorites" },
+      });
+    }, 1500);
+    return;
   }
-  
-  isAnimating.value = true
-  
-  const wasFavorited = isFavorited.value
-  const isNowFavorited = favoritesStore.toggleFavorite(props.product)
-  
+
+  isAnimating.value = true;
+
+  const wasFavorited = isFavorited.value;
+  const isNowFavorited = favoritesStore.toggleFavorite(props.product);
+
   if (isNowFavorited && !wasFavorited) {
     toast.success(
-      'Adicionado aos favoritos!',
-      `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? '...' : ''} foi salvo nos favoritos.`,
-      2000
-    )
+      "Adicionado aos favoritos!",
+      `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? "..." : ""} foi salvo nos favoritos.`,
+      2000,
+    );
   } else if (!isNowFavorited && wasFavorited) {
     toast.info(
-      'Removido dos favoritos',
-      `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? '...' : ''} foi removido dos favoritos.`,
-      2000
-    )
+      "Removido dos favoritos",
+      `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? "..." : ""} foi removido dos favoritos.`,
+      2000,
+    );
   }
-  
-  emit('update', isNowFavorited)
-  
+
+  emit("update", isNowFavorited);
+
   setTimeout(() => {
-    isAnimating.value = false
-  }, 300)
-}
+    isAnimating.value = false;
+  }, 300);
+};
 </script>
 
 <style scoped>
@@ -138,7 +146,12 @@ const handleFavorite = async () => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.2),
+    transparent
+  );
   transition: left 0.5s ease;
   pointer-events: none;
 }
@@ -204,7 +217,8 @@ const handleFavorite = async () => {
 }
 
 @keyframes heartGlow {
-  0%, 100% {
+  0%,
+  100% {
     filter: drop-shadow(0 0 6px rgba(255, 107, 107, 0.5));
   }
   50% {
@@ -288,7 +302,8 @@ const handleFavorite = async () => {
 }
 
 @keyframes tooltipIconPulse {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -318,14 +333,18 @@ const handleFavorite = async () => {
 
 /* Efeito de partículas ao favoritar */
 .favorite-btn-premium.active::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
   width: 0;
   height: 0;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 107, 107, 0.6) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 107, 107, 0.6) 0%,
+    transparent 70%
+  );
   transform: translate(-50%, -50%);
   animation: particleBurst 0.6s ease-out forwards;
   pointer-events: none;
@@ -350,7 +369,9 @@ const handleFavorite = async () => {
 }
 
 /* Versão apenas ícone (sem texto) */
-.favorite-btn-premium:has(.heart-icon-premium):not(:has(.favorite-text-premium)) {
+.favorite-btn-premium:has(.heart-icon-premium):not(
+    :has(.favorite-text-premium)
+  ) {
   padding: 10px;
   border-radius: 50%;
   width: 44px;
@@ -358,7 +379,8 @@ const handleFavorite = async () => {
   justify-content: center;
 }
 
-.favorite-btn-premium:has(.heart-icon-premium):not(:has(.favorite-text-premium)) .heart-icon-premium {
+.favorite-btn-premium:has(.heart-icon-premium):not(:has(.favorite-text-premium))
+  .heart-icon-premium {
   width: 22px;
   height: 22px;
 }
@@ -368,38 +390,43 @@ const handleFavorite = async () => {
   .favorite-btn-premium {
     padding: 8px 14px;
   }
-  
+
   .heart-icon-premium {
     width: 18px;
     height: 18px;
   }
-  
+
   .favorite-text-premium {
     font-size: 0.75rem;
   }
-  
+
   .tooltip-premium-favorite {
     min-width: 150px;
     padding: 6px 12px;
   }
-  
+
   .tooltip-message {
     font-size: 0.7rem;
     white-space: normal;
     text-align: center;
   }
-  
+
   .tooltip-content-premium {
     gap: 6px;
   }
-  
-  .favorite-btn-premium:has(.heart-icon-premium):not(:has(.favorite-text-premium)) {
+
+  .favorite-btn-premium:has(.heart-icon-premium):not(
+      :has(.favorite-text-premium)
+    ) {
     padding: 8px;
     width: 38px;
     height: 38px;
   }
-  
-  .favorite-btn-premium:has(.heart-icon-premium):not(:has(.favorite-text-premium)) .heart-icon-premium {
+
+  .favorite-btn-premium:has(.heart-icon-premium):not(
+      :has(.favorite-text-premium)
+    )
+    .heart-icon-premium {
     width: 18px;
     height: 18px;
   }
@@ -409,27 +436,32 @@ const handleFavorite = async () => {
   .favorite-btn-premium {
     padding: 6px 12px;
   }
-  
+
   .heart-icon-premium {
     width: 16px;
     height: 16px;
   }
-  
+
   .favorite-text-premium {
     font-size: 0.7rem;
   }
-  
+
   .tooltip-message {
     font-size: 0.65rem;
   }
-  
-  .favorite-btn-premium:has(.heart-icon-premium):not(:has(.favorite-text-premium)) {
+
+  .favorite-btn-premium:has(.heart-icon-premium):not(
+      :has(.favorite-text-premium)
+    ) {
     padding: 6px;
     width: 34px;
     height: 34px;
   }
-  
-  .favorite-btn-premium:has(.heart-icon-premium):not(:has(.favorite-text-premium)) .heart-icon-premium {
+
+  .favorite-btn-premium:has(.heart-icon-premium):not(
+      :has(.favorite-text-premium)
+    )
+    .heart-icon-premium {
     width: 16px;
     height: 16px;
   }

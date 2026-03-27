@@ -22,14 +22,31 @@
 
       <!-- Conteúdo do Perfil Premium -->
       <div v-else class="profile-content-premium">
-        <!-- Header do Profile Premium -->
+        <!-- Header do Profile Premium com Foto -->
         <div class="profile-header-premium">
           <div class="avatar-section-premium">
-            <div class="avatar-premium">
-              <span class="avatar-text-premium">{{ userInitials }}</span>
+            <div class="avatar-wrapper-premium">
+              <div class="avatar-premium" @click="openPhotoModal">
+                <img 
+                  v-if="profilePhoto" 
+                  :src="profilePhoto" 
+                  :alt="user?.name || 'Usuário'"
+                  class="avatar-image-premium"
+                >
+                <div v-else class="avatar-placeholder-premium">
+                  <span class="avatar-text-premium">{{ userInitials }}</span>
+                </div>
+                <div class="avatar-overlay-premium">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M3 17L9 11L13 15L21 7M21 7H16.5M21 7V11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    <path d="M3 21H21" stroke="currentColor" stroke-width="1.5"/>
+                  </svg>
+                  <span>Alterar foto</span>
+                </div>
+              </div>
               <div class="avatar-glow"></div>
+              <div class="avatar-ring"></div>
             </div>
-            <div class="avatar-ring"></div>
           </div>
           <div class="user-info-premium">
             <h1 class="user-name-premium">{{ user?.name || 'Usuário' }}</h1>
@@ -261,6 +278,83 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal de Foto de Perfil Premium -->
+    <div v-if="showPhotoModal" class="modal-overlay-premium" @click="closePhotoModal">
+      <div class="modal-content-premium photo-modal-premium" @click.stop>
+        <div class="modal-header-premium">
+          <h3>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M3 17L9 11L13 15L21 7M21 7H16.5M21 7V11.5" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M3 21H21" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            Foto de Perfil
+          </h3>
+          <button class="close-modal-premium" @click="closePhotoModal">✕</button>
+        </div>
+        
+        <div class="photo-preview-premium">
+          <div class="current-photo-premium">
+            <div class="photo-preview-wrapper">
+              <img 
+                v-if="tempPhotoPreview" 
+                :src="tempPhotoPreview" 
+                alt="Preview" 
+                class="preview-image-premium"
+              >
+              <div v-else-if="profilePhoto" class="preview-image-premium" :style="{ backgroundImage: `url(${profilePhoto})` }"></div>
+              <div v-else class="preview-placeholder-premium">
+                <span class="placeholder-text-premium">{{ userInitials }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="photo-upload-premium">
+          <label class="upload-btn-premium">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M12 4V12M12 12L15 9M12 12L9 9" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M4 16L4 17C4 18.6569 5.34315 20 7 20L17 20C18.6569 20 20 18.6569 20 17L20 16" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            Escolher imagem
+            <input 
+              type="file" 
+              accept="image/jpeg,image/png,image/webp"
+              @change="handleImageUpload"
+              style="display: none"
+            >
+          </label>
+          
+          <div class="photo-info-premium">
+            <p>Formatos: JPG, PNG, WebP</p>
+            <p>Máximo: 5MB</p>
+          </div>
+        </div>
+
+        <div class="photo-actions-premium">
+          <button 
+            v-if="profilePhoto || tempPhotoPreview" 
+            class="remove-photo-btn-premium" 
+            @click="removePhoto"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M3 6H5H21M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            Remover foto
+          </button>
+          <button 
+            class="save-photo-btn-premium" 
+            @click="savePhoto"
+            :disabled="!tempPhotoPreview && !profilePhoto"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            Salvar foto
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -270,21 +364,25 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useOrdersStore } from '../stores/orders'
 import { useToast } from '../plugins/toast'
-import { useConfirm } from '../plugins/confirm'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const ordersStore = useOrdersStore()
 const toast = useToast()
-const { confirm } = useConfirm()
 
 // Estado
 const loading = ref(true)
 const showEditModal = ref(false)
+const showPhotoModal = ref(false)
 const editForm = ref({
   name: '',
   email: ''
 })
+
+// Estado da foto de perfil
+const profilePhoto = ref<string | null>(null)
+const tempPhotoPreview = ref<string | null>(null)
+const tempPhotoFile = ref<File | null>(null)
 
 // Partículas
 const getParticleStyle = (index: number) => {
@@ -299,7 +397,6 @@ const getParticleStyle = (index: number) => {
 
 // Computed
 const orders = computed(() => ordersStore.orders)
-const totalOrders = computed(() => ordersStore.totalOrders)
 const user = computed(() => authStore.user)
 
 const userInitials = computed(() => {
@@ -350,6 +447,96 @@ const goToOrderDetails = (orderId: string) => {
   router.push(`/orders?orderId=${orderId}`)
 }
 
+// ========== FUNÇÕES DA FOTO DE PERFIL ==========
+
+// Carregar foto do LocalStorage
+const loadProfilePhoto = () => {
+  const savedPhoto = localStorage.getItem(`profile_photo_${user.value?.id || 'default'}`)
+  if (savedPhoto) {
+    profilePhoto.value = savedPhoto
+  }
+}
+
+// Salvar foto no LocalStorage
+const saveProfilePhoto = (photoData: string) => {
+  const key = `profile_photo_${user.value?.id || 'default'}`
+  localStorage.setItem(key, photoData)
+  profilePhoto.value = photoData
+}
+
+// Remover foto do LocalStorage
+const removeProfilePhoto = () => {
+  const key = `profile_photo_${user.value?.id || 'default'}`
+  localStorage.removeItem(key)
+  profilePhoto.value = null
+}
+
+// Abrir modal de foto
+const openPhotoModal = () => {
+  tempPhotoPreview.value = null
+  tempPhotoFile.value = null
+  showPhotoModal.value = true
+}
+
+// Fechar modal de foto
+const closePhotoModal = () => {
+  showPhotoModal.value = false
+  tempPhotoPreview.value = null
+  tempPhotoFile.value = null
+}
+
+// Handle upload de imagem
+const handleImageUpload = (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  
+  if (!file) return
+  
+  // Verificar tipo de arquivo
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+  if (!validTypes.includes(file.type)) {
+    toast.error('Formato inválido', 'Por favor, selecione uma imagem nos formatos JPG, PNG ou WebP.', 3000)
+    return
+  }
+  
+  // Verificar tamanho (máximo 5MB)
+  const maxSize = 5 * 1024 * 1024 // 5MB
+  if (file.size > maxSize) {
+    toast.error('Arquivo muito grande', 'A imagem deve ter no máximo 5MB.', 3000)
+    return
+  }
+  
+  tempPhotoFile.value = file
+  
+  // Criar preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    tempPhotoPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+}
+
+// Salvar foto
+const savePhoto = () => {
+  if (tempPhotoPreview.value) {
+    saveProfilePhoto(tempPhotoPreview.value)
+    toast.success('Foto atualizada', 'Sua foto de perfil foi atualizada com sucesso.', 3000)
+    closePhotoModal()
+  } else if (profilePhoto.value) {
+    // Se já tem foto e não selecionou nova, apenas fecha
+    closePhotoModal()
+  }
+}
+
+// Remover foto
+const removePhoto = () => {
+  removeProfilePhoto()
+  toast.info('Foto removida', 'Sua foto de perfil foi removida.', 2000)
+  closePhotoModal()
+}
+
+// ========== FUNÇÕES DE PERFIL ==========
+
 // Editar perfil
 const openEditModal = () => {
   editForm.value = {
@@ -375,6 +562,14 @@ const saveProfile = async () => {
 watch(() => authStore.isAuthenticated, (isAuthenticated) => {
   if (isAuthenticated) {
     ordersStore.syncWithUser()
+    loadProfilePhoto()
+  }
+})
+
+// Observar mudanças no usuário para recarregar foto
+watch(() => user.value?.id, () => {
+  if (authStore.isAuthenticated) {
+    loadProfilePhoto()
   }
 })
 
@@ -386,6 +581,7 @@ onMounted(() => {
   }
   
   ordersStore.syncWithUser()
+  loadProfilePhoto()
   
   setTimeout(() => {
     loading.value = false
@@ -507,7 +703,7 @@ onMounted(() => {
   z-index: 1;
 }
 
-/* Skeleton Loading Premium */
+/* Skeleton Loading */
 .skeleton-loader-premium {
   animation: fadeIn 0.3s ease;
 }
@@ -537,6 +733,11 @@ onMounted(() => {
   100% { background-position: -200% 0; }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Profile Content */
 .profile-content-premium {
   animation: fadeInUpProfile 0.6s ease;
@@ -553,7 +754,7 @@ onMounted(() => {
   }
 }
 
-/* Profile Header Premium */
+/* Profile Header */
 .profile-header-premium {
   background: rgba(11, 11, 15, 0.7);
   backdrop-filter: blur(20px);
@@ -575,8 +776,14 @@ onMounted(() => {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
 }
 
+/* Avatar Styles */
 .avatar-section-premium {
   position: relative;
+}
+
+.avatar-wrapper-premium {
+  position: relative;
+  cursor: pointer;
 }
 
 .avatar-premium {
@@ -590,10 +797,28 @@ onMounted(() => {
   position: relative;
   z-index: 2;
   transition: all 0.3s ease;
+  overflow: hidden;
+  cursor: pointer;
 }
 
 .avatar-premium:hover {
   transform: scale(1.05);
+}
+
+.avatar-image-premium {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.avatar-placeholder-premium {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #b58f2a 100%);
 }
 
 .avatar-text-premium {
@@ -601,6 +826,41 @@ onMounted(() => {
   font-weight: bold;
   color: var(--black-primary);
   text-transform: uppercase;
+}
+
+.avatar-overlay-premium {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  cursor: pointer;
+}
+
+.avatar-overlay-premium svg {
+  width: 24px;
+  height: 24px;
+  color: var(--gold-primary);
+}
+
+.avatar-overlay-premium span {
+  font-size: 0.7rem;
+  color: var(--white-soft);
+  font-weight: 500;
+}
+
+.avatar-premium:hover .avatar-overlay-premium {
+  opacity: 1;
 }
 
 .avatar-glow {
@@ -711,7 +971,7 @@ onMounted(() => {
   gap: 14px;
 }
 
-/* Info Card Premium */
+/* Info Card */
 .info-card-premium {
   background: rgba(11, 11, 15, 0.6);
   backdrop-filter: blur(15px);
@@ -777,7 +1037,7 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* Orders Card Premium */
+/* Orders Card */
 .orders-card-premium {
   background: rgba(11, 11, 15, 0.6);
   backdrop-filter: blur(15px);
@@ -805,7 +1065,7 @@ onMounted(() => {
   margin-left: 10px;
 }
 
-/* Empty Orders Premium */
+/* Empty Orders */
 .empty-orders-premium {
   text-align: center;
   padding: 60px 20px;
@@ -901,7 +1161,7 @@ onMounted(() => {
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
 }
 
-/* Orders List Premium */
+/* Orders List */
 .orders-list-premium {
   margin-top: 24px;
 }
@@ -943,7 +1203,6 @@ onMounted(() => {
   left: 100%;
 }
 
-/* Order Header */
 .order-header-premium {
   display: flex;
   justify-content: space-between;
@@ -1007,7 +1266,6 @@ onMounted(() => {
   50% { opacity: 1; transform: scale(1.2); }
 }
 
-/* Order Details */
 .order-details-premium {
   display: flex;
   justify-content: space-between;
@@ -1068,7 +1326,6 @@ onMounted(() => {
   border: 1px solid rgba(212, 175, 55, 0.2);
 }
 
-/* Timeline Premium */
 .order-timeline-premium {
   display: flex;
   align-items: center;
@@ -1120,7 +1377,6 @@ onMounted(() => {
   background: linear-gradient(90deg, var(--gold-primary), rgba(212, 175, 55, 0.5));
 }
 
-/* Order Products */
 .order-products-premium {
   margin: 20px 0;
 }
@@ -1187,7 +1443,6 @@ onMounted(() => {
   margin-top: 8px;
 }
 
-/* Order Footer */
 .order-footer-premium {
   margin-top: 20px;
   padding-top: 16px;
@@ -1216,7 +1471,7 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* Modal Premium */
+/* Modal Styles */
 .modal-overlay-premium {
   position: fixed;
   top: 0;
@@ -1230,11 +1485,6 @@ onMounted(() => {
   justify-content: center;
   z-index: 2000;
   animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 .modal-content-premium {
@@ -1375,6 +1625,155 @@ onMounted(() => {
   box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
 }
 
+/* Photo Modal Specific */
+.photo-modal-premium {
+  max-width: 500px;
+}
+
+.photo-preview-premium {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+.current-photo-premium {
+  position: relative;
+}
+
+.photo-preview-wrapper {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(59, 58, 64, 0.3);
+  border: 3px solid rgba(212, 175, 55, 0.3);
+  transition: all 0.3s ease;
+}
+
+.photo-preview-wrapper:hover {
+  border-color: var(--gold-primary);
+  transform: scale(1.02);
+}
+
+.preview-image-premium {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background-size: cover;
+  background-position: center;
+}
+
+.preview-placeholder-premium {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #b58f2a 100%);
+}
+
+.placeholder-text-premium {
+  font-size: 3rem;
+  font-weight: bold;
+  color: var(--black-primary);
+  text-transform: uppercase;
+}
+
+.photo-upload-premium {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: rgba(59, 58, 64, 0.2);
+  border-radius: 20px;
+  margin: 20px 0;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.upload-btn-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--gold-primary);
+  padding: 12px 24px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.upload-btn-premium:hover {
+  background: rgba(212, 175, 55, 0.25);
+  transform: translateY(-2px);
+}
+
+.photo-info-premium {
+  text-align: right;
+}
+
+.photo-info-premium p {
+  font-size: 0.7rem;
+  color: rgba(245, 240, 230, 0.5);
+  margin: 2px 0;
+}
+
+.photo-actions-premium {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.remove-photo-btn-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  color: #f44336;
+  padding: 10px 24px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.remove-photo-btn-premium:hover {
+  background: rgba(244, 67, 54, 0.25);
+  transform: translateY(-2px);
+}
+
+.save-photo-btn-premium {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #b58f2a 100%);
+  color: var(--black-primary);
+  border: none;
+  padding: 10px 28px;
+  border-radius: 50px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  font-size: 0.85rem;
+}
+
+.save-photo-btn-premium:hover:not(:disabled) {
+  transform: translateY(-2px);
+  gap: 12px;
+  box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+}
+
+.save-photo-btn-premium:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Transition Group */
 .order-premium-move,
 .order-premium-enter-active,
@@ -1396,7 +1795,7 @@ onMounted(() => {
   position: absolute;
 }
 
-/* Responsividade Premium */
+/* Responsividade */
 @media (max-width: 1024px) {
   .container-premium {
     padding: 0 24px;
@@ -1417,6 +1816,15 @@ onMounted(() => {
   
   .user-name-premium {
     font-size: 1.6rem;
+  }
+  
+  .photo-preview-wrapper {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .placeholder-text-premium {
+    font-size: 2.5rem;
   }
 }
 
@@ -1505,6 +1913,34 @@ onMounted(() => {
     padding: 24px;
     margin: 0 16px;
   }
+  
+  .photo-preview-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .placeholder-text-premium {
+    font-size: 2rem;
+  }
+  
+  .photo-upload-premium {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .photo-info-premium {
+    text-align: center;
+  }
+  
+  .photo-actions-premium {
+    flex-direction: column;
+  }
+  
+  .remove-photo-btn-premium,
+  .save-photo-btn-premium {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1537,6 +1973,29 @@ onMounted(() => {
   .btn-save-premium,
   .btn-cancel-premium {
     padding: 8px 20px;
+  }
+  
+  .avatar-premium {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .avatar-text-premium {
+    font-size: 1.6rem;
+  }
+  
+  .photo-preview-wrapper {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .placeholder-text-premium {
+    font-size: 1.6rem;
+  }
+  
+  .upload-btn-premium {
+    padding: 10px 20px;
+    font-size: 0.8rem;
   }
 }
 </style>

@@ -5,8 +5,13 @@
       <div class="image-overlay">
         <span class="quick-view">Ver detalhes</span>
       </div>
-      <div class="favorite-overlay">
-        <FavoriteButton :product="product" :show-text="false" @update="onFavoriteUpdate" />
+      <!-- Ícone de favorito - posicionado corretamente no canto superior direito -->
+      <div class="favorite-overlay" @click.stop="handleFavoriteClick">
+        <FavoriteButton 
+          :product="product" 
+          :show-text="false" 
+          @update="onFavoriteUpdate"
+        />
       </div>
     </div>
     <div class="product-info">
@@ -88,7 +93,36 @@ const viewProduct = () => {
   emit('view', props.product)
 }
 
-const addToCart = async () => {
+const handleFavoriteClick = (event: MouseEvent) => {
+  // Previne a propagação para o card pai
+  event.stopPropagation()
+  
+  // Verificar se usuário está logado
+  if (!isAuthenticated.value) {
+    toast.warning(
+      'Login necessário',
+      'Faça login para adicionar produtos aos favoritos.',
+      4000
+    )
+    // Redirecionar para página de login e depois voltar para favoritos
+    setTimeout(() => {
+      router.push({
+        path: '/login',
+        query: { redirect: '/favorites' }
+      })
+    }, 1500)
+    return
+  }
+  
+  // Se estiver logado, apenas atualiza o favorito
+  // O FavoriteButton já lida com a lógica de favoritar
+  console.log('Favoritando produto:', props.product.title)
+}
+
+const addToCart = async (event: MouseEvent) => {
+  // Previne a propagação para o card pai
+  event.stopPropagation()
+  
   // Verificar se usuário está logado
   if (!isAuthenticated.value) {
     toast.warning(
@@ -128,6 +162,7 @@ const addToCart = async () => {
 
 const onFavoriteUpdate = (isFavorited: boolean) => {
   // Evento já tratado no componente FavoriteButton
+  console.log('Favorite status updated:', isFavorited)
 }
 </script>
 
@@ -190,15 +225,19 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   opacity: 1;
 }
 
+/* CORREÇÃO: Ícone de favorito posicionado no canto superior direito */
 .favorite-overlay {
   position: absolute;
   top: 12px;
   right: 12px;
-  z-index: 10;
-  /* Removido o background para que o tooltip do FavoriteButton funcione */
+  z-index: 20;
   background: transparent;
   transition: all 0.3s ease;
-  opacity: 1;
+  cursor: pointer;
+}
+
+.favorite-overlay:active {
+  transform: scale(0.95);
 }
 
 .product-card:hover .favorite-overlay {
@@ -358,14 +397,46 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   to { transform: rotate(360deg); }
 }
 
+/* CORREÇÃO: Garantir que o ícone de favorito não fique no meio */
+.favorite-overlay :deep(.favorite-btn-premium) {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(212, 175, 55, 0.3) !important;
+  padding: 8px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+}
+
+.favorite-overlay :deep(.favorite-btn-premium.active) {
+  background: rgba(255, 107, 107, 0.2) !important;
+  border-color: #ff6b6b !important;
+}
+
+.favorite-overlay :deep(.heart-icon-premium) {
+  width: 18px !important;
+  height: 18px !important;
+}
+
 @media (max-width: 768px) {
   .product-image {
     height: 220px;
   }
   
   .favorite-overlay {
-    opacity: 1;
-    background: transparent;
+    top: 10px;
+    right: 10px;
+  }
+  
+  .favorite-overlay :deep(.favorite-btn-premium) {
+    width: 32px !important;
+    height: 32px !important;
+    padding: 6px !important;
+  }
+  
+  .favorite-overlay :deep(.heart-icon-premium) {
+    width: 16px !important;
+    height: 16px !important;
   }
   
   .add-to-cart-wrapper .tooltip-text {
@@ -381,6 +452,17 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
 }
 
 @media (max-width: 480px) {
+  .favorite-overlay :deep(.favorite-btn-premium) {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 5px !important;
+  }
+  
+  .favorite-overlay :deep(.heart-icon-premium) {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  
   .add-to-cart-wrapper .tooltip-text {
     width: 140px;
     right: -30px;

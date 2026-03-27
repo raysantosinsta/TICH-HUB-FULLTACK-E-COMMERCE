@@ -43,6 +43,7 @@ export const useSearchStore = defineStore('search', () => {
 
   // Função de busca
   const searchProducts = (products: Product[], query: string, category?: string) => {
+    // If no query and no category, return empty array
     if (!query.trim() && !category) {
       return []
     }

@@ -1,3 +1,5 @@
+
+
 <template>
   <div class="search-results-premium">
     <!-- Background Premium com Efeitos Avançados -->
@@ -148,6 +150,62 @@ const searchQuery = ref('')
 const selectedCategory = ref('')
 const sortBy = ref<'relevance' | 'price_asc' | 'price_desc' | 'rating'>('relevance')
 
+// Função para carregar os dados da busca
+const loadSearchResults = async () => {
+  loading.value = true
+  
+  // Pegar os valores diretamente da URL
+  const query = (route.query.q as string) || ''
+  const category = (route.query.category as string) || ''
+  
+  console.log('🔍 Loading search results:', { query, category })
+  
+  searchQuery.value = query
+  selectedCategory.value = category
+  
+  // Atualizar o store
+  searchStore.searchQuery = query
+  searchStore.selectedCategory = category
+  
+  // Adicionar ao histórico se houver query
+  if (query) {
+    searchStore.addToRecentSearches(query)
+  }
+  
+  // Pequeno delay para garantir que o store foi atualizado
+  await new Promise(resolve => setTimeout(resolve, 50))
+  
+  console.log('✅ Results loaded:', results.value.length)
+  loading.value = false
+}
+
+// Watch para mudanças na query da URL
+watch(
+  () => route.query.q,
+  async (newQuery, oldQuery) => {
+    console.log('📝 Query changed:', { newQuery, oldQuery })
+    if (newQuery !== oldQuery) {
+      await loadSearchResults()
+    }
+  }
+)
+
+// Watch para mudanças na categoria da URL
+watch(
+  () => route.query.category,
+  async (newCategory, oldCategory) => {
+    console.log('🏷️ Category changed:', { newCategory, oldCategory })
+    if (newCategory !== oldCategory) {
+      await loadSearchResults()
+    }
+  }
+)
+
+// Watch para mudanças no sortBy
+watch(sortBy, (newVal) => {
+  searchStore.sortBy = newVal
+})
+
 const getParticleStyle = (index: number) => {
   return {
     left: `${Math.random() * 100}%`,
@@ -161,8 +219,10 @@ const getParticleStyle = (index: number) => {
 const categories = computed(() => productsStore.categories)
 
 const results = computed(() => {
+  // Obter resultados filtrados do store
   let results = searchStore.getFilteredResults(productsStore.products)
   
+  // Ordenar
   const sorted = [...results]
   switch (sortBy.value) {
     case 'price_asc':
@@ -191,20 +251,29 @@ const formatCategoryName = (category: string) => {
 const filterByCategory = (category: string) => {
   selectedCategory.value = category
   searchStore.selectedCategory = category
-  updateSearchInUrl()
+  
+  // Atualizar a URL
+  const params: any = {}
+  if (searchQuery.value) {
+    params.q = searchQuery.value
+  }
+  if (category) {
+    params.category = category
+  }
+  
+  router.replace({ query: params })
 }
 
 const clearCategoryFilter = () => {
   selectedCategory.value = ''
   searchStore.selectedCategory = ''
-  updateSearchInUrl()
-}
-
-const updateSearchInUrl = () => {
-  const params: any = { q: searchQuery.value }
-  if (selectedCategory.value) {
-    params.category = selectedCategory.value
+  
+  // Atualizar a URL
+  const params: any = {}
+  if (searchQuery.value) {
+    params.q = searchQuery.value
   }
+  
   router.replace({ query: params })
 }
 
@@ -213,29 +282,20 @@ const goToProduct = (product: Product) => {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-// Watch para ordenação
-watch(sortBy, (newVal) => {
-  searchStore.sortBy = newVal
-})
-
 onMounted(async () => {
+  console.log('🚀 SearchResults mounted')
+  
+  // Carregar produtos se necessário
   if (productsStore.products.length === 0) {
     await productsStore.fetchProducts()
   }
   
-  searchQuery.value = route.query.q as string || ''
-  selectedCategory.value = route.query.category as string || ''
-  
-  searchStore.searchQuery = searchQuery.value
-  searchStore.selectedCategory = selectedCategory.value
-  
-  if (searchQuery.value) {
-    searchStore.addToRecentSearches(searchQuery.value)
-  }
-  
-  loading.value = false
+  // Carregar os resultados da busca
+  await loadSearchResults()
 })
 </script>
+
+
 
 <style scoped>
 /* ========== SEARCH RESULTS PREMIUM ========== */

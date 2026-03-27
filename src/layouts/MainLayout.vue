@@ -2,7 +2,8 @@
   <div class="main-layout">
     <Navbar />
     <main class="main-content">
-      <router-view />
+      <!-- Adicionar :key="$route.fullPath" para forçar re-renderização -->
+      <router-view :key="$route.fullPath" />
     </main>
     <Footer />
   </div>

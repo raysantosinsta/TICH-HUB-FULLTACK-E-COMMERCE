@@ -1,17 +1,16 @@
 <template>
   <div class="home-page">
     <!-- Hero Banner com Slideshow de Produtos -->
-    <HeroBanner />
+     <HeroBanner />
     
     <div class="container">
       <!-- Banner Flash Deal (Ofertas Relâmpago) -->
-      <BannerFlash />
+      <BannerFlash />  
       
       <!-- Banner Grid (Promoções) -->
       <BannerGrid />
+    
       
-      <!-- Seção de Produtos em Destaque -->
-      <ProductList />
     </div>
     
     <!-- Seções Parallax -->

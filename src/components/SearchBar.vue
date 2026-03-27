@@ -14,6 +14,7 @@
         @input="handleInput"
         @focus="openDropdown"
         @keydown.escape="closeDropdown"
+        @keydown.enter="handleEnter"
       />
       
       <button 
@@ -117,13 +118,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, watch, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useProductsStore } from '../stores/products'
 import { useSearchStore } from '../stores/search'
 import type { Product } from '../types'
 
 const router = useRouter()
+const route = useRoute()
 const productsStore = useProductsStore()
 const searchStore = useSearchStore()
 
@@ -131,6 +133,27 @@ const localSearchQuery = ref('')
 const showDropdown = ref(false)
 const searchInput = ref<HTMLInputElement | null>(null)
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+// Sync with route on mount
+onMounted(() => {
+  const queryParam = route.query.q as string
+  if (queryParam) {
+    localSearchQuery.value = queryParam
+    searchStore.searchQuery = queryParam
+  }
+})
+
+// Watch for route changes
+watch(
+  () => route.query.q,
+  (newQuery) => {
+    const newQueryValue = (newQuery as string) || ''
+    if (newQueryValue !== localSearchQuery.value) {
+      localSearchQuery.value = newQueryValue
+      searchStore.searchQuery = newQueryValue
+    }
+  }
+)
 
 const filteredResults = computed(() => {
   if (!localSearchQuery.value.trim()) return []
@@ -169,15 +192,36 @@ const highlightText = (text: string) => {
   return text.replace(regex, '<mark>$1</mark>')
 }
 
+// No handleInput, quando estiver na página de busca
 const handleInput = () => {
   if (debounceTimer) clearTimeout(debounceTimer)
   
   debounceTimer = setTimeout(() => {
     searchStore.searchQuery = localSearchQuery.value
+    
+    // Se estiver na página de busca, atualiza a URL
+    if (route.path === '/search') {
+      const params: any = {}
+      if (localSearchQuery.value.trim()) {
+        params.q = localSearchQuery.value
+      }
+      if (route.query.category) {
+        params.category = route.query.category
+      }
+      // Usar replace para não criar histórico desnecessário
+      router.replace({ query: params })
+    }
+    
     if (localSearchQuery.value.trim()) {
       showDropdown.value = true
     }
   }, 300)
+}
+
+const handleEnter = () => {
+  if (localSearchQuery.value.trim()) {
+    viewAllResults()
+  }
 }
 
 const openDropdown = () => {
@@ -194,6 +238,11 @@ const clearSearch = () => {
   localSearchQuery.value = ''
   searchStore.searchQuery = ''
   searchInput.value?.focus()
+  
+  // Limpar a URL
+  if (route.query.q) {
+    router.push({ query: {} })
+  }
 }
 
 const selectProduct = (product: Product) => {
@@ -202,13 +251,16 @@ const selectProduct = (product: Product) => {
   }
   closeDropdown()
   router.push(`/product/${product.id}`)
-  clearSearch()
 }
 
 const viewAllResults = () => {
   if (localSearchQuery.value.trim()) {
     searchStore.addToRecentSearches(localSearchQuery.value)
-    router.push(`/search?q=${encodeURIComponent(localSearchQuery.value)}`)
+    // IMPORTANTE: Usar push para navegar para a página de busca
+    router.push({
+      path: '/search',
+      query: { q: localSearchQuery.value }
+    })
     closeDropdown()
   }
 }
@@ -216,8 +268,13 @@ const viewAllResults = () => {
 const useRecentSearch = (search: string) => {
   localSearchQuery.value = search
   searchStore.searchQuery = search
-  showDropdown.value = true
-  searchInput.value?.focus()
+  // Navegar para a página de busca
+  router.push({
+    path: '/search',
+    query: { q: search }
+  })
+  showDropdown.value = false
+  searchInput.value?.blur()
 }
 
 const clearHistory = () => {
