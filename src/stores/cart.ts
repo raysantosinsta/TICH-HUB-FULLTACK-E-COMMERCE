@@ -180,7 +180,7 @@ export const useCartStore = defineStore('cart', () => {
     if (authStore.isAuthenticated) {
       const userId = authStore.user?.id;
       if (userId) {
-        loadUserCart(userId);
+        loadUserCart(typeof userId === 'string' ? parseInt(userId, 10) : userId);
       }
     } else {
       loadGuestCart();
@@ -205,13 +205,16 @@ export const useCartStore = defineStore('cart', () => {
     saveCart();
   };
 
-  /**
-   * Atualiza a quantidade de um produto no carrinho
-   */
-  const updateQuantity = (productId: number, quantity: number): void => {
-    cartInstance.value.updateQuantity(productId, quantity);
-    saveCart();
-  };
+
+/**
+ * Atualiza a quantidade de um produto no carrinho
+ */
+const updateQuantity = (productId: number, quantity: number): void => {
+  // Ensure quantity is a number
+  const numericQuantity = typeof quantity === 'string' ? parseInt(quantity, 10) : quantity;
+  cartInstance.value.updateQuantity(productId, numericQuantity);
+  saveCart();
+};
 
   /**
    * Limpa todo o carrinho

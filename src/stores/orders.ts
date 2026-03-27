@@ -106,42 +106,47 @@ export const useOrdersStore = defineStore("orders", () => {
 
   // ========== MÉTODOS PÚBLICOS ==========
 
-  /**
-   * Cria um novo pedido a partir do carrinho
-   * @param cartItems - Itens do carrinho
-   * @param subtotal - Subtotal do pedido
-   * @param shipping - Valor do frete
-   * @param discount - Desconto aplicado
-   * @param total - Total do pedido
-   * @returns Pedido criado ou null
-   */
-  const createOrder = (
-    cartItems: { product: any; quantity: number }[],
-    subtotal: number,
-    shipping: number,
-    discount: number,
-    total: number
-  ): Order | null => {
-    if (!authStore.isAuthenticated) {
-      debugLog("Tentativa de criar pedido sem usuário logado");
-      return null;
-    }
 
-    const newOrder = Order.createFromCart(
-      cartItems,
-      subtotal,
-      shipping,
-      discount,
-      total,
-      authStore.user?.id
-    );
+/**
+ * Cria um novo pedido a partir do carrinho
+ * @param cartItems - Itens do carrinho
+ * @param subtotal - Subtotal do pedido
+ * @param shipping - Valor do frete
+ * @param discount - Desconto aplicado
+ * @param total - Total do pedido
+ * @returns Pedido criado ou null
+ */
+const createOrder = (
+  cartItems: { product: any; quantity: number }[],
+  subtotal: number,
+  shipping: number,
+  discount: number,
+  total: number
+): Order | null => {
+  if (!authStore.isAuthenticated) {
+    debugLog("Tentativa de criar pedido sem usuário logado");
+    return null;
+  }
 
-    orders.value.unshift(newOrder); // Adicionar no início do array
-    saveOrders();
-    debugLog("Novo pedido criado", newOrder.id);
-    
-    return newOrder;
-  };
+  // Ensure userId is a number
+  const userId = authStore.user?.id;
+  const numericUserId = userId ? Number(userId) : undefined;
+  
+  const newOrder = Order.createFromCart(
+    cartItems,
+    subtotal,
+    shipping,
+    discount,
+    total,
+    numericUserId
+  );
+
+  orders.value.unshift(newOrder);
+  saveOrders();
+  debugLog("Novo pedido criado", newOrder.id);
+  
+  return newOrder;
+};
 
   /**
    * Atualiza o status de um pedido
