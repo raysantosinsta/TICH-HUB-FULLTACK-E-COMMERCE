@@ -1,4 +1,14 @@
 {
+  "rewrites": [
+    {
+      "source": "/api/products",
+      "destination": "https://fakestoreapi.com/products"
+    },
+    {
+      "source": "/api/products/:path*",
+      "destination": "https://fakestoreapi.com/products/:path*"
+    }
+  ],
   "routes": [
     {
       "handle": "filesystem"
