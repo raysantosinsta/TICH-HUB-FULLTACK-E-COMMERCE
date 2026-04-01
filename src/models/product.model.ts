@@ -25,7 +25,9 @@ export class Product {
     this.description = data.description || "";
     this.category = data.category || "";
     this.image = data.image || data.images?.[0] || "";
-    this.rating = data.rating || { rate: 0, count: 0 };
+   this.rating = data.rating && typeof data.rating === 'object'
+      ? { rate: data.rating.rate || 0, count: data.rating.count || 0 }
+      : { rate: 0, count: 0 };
     this.discount = data.discount || 0;
     this.slug = data.slug;
     this.images = data.images || [];
@@ -49,8 +51,9 @@ export class Product {
     return this.hasDiscount() ? `${Math.round(this.discount! * 100)}% OFF` : "";
   }
 
+   // 🔥 GETTERS COM VALIDAÇÃO
   public get starRating(): string {
-    const { rate } = this.rating;
+    const rate = this.rating?.rate ?? 0; // Garante valor numérico
     const fullStars = Math.floor(rate);
     const hasHalfStar = rate % 1 >= 0.5;
     const stars = "★".repeat(fullStars);
@@ -59,16 +62,16 @@ export class Product {
     return stars + halfStar + emptyStars;
   }
 
-  public get fullStars(): number {
-    return Math.floor(this.rating.rate);
+   public get fullStars(): number {
+    return Math.floor(this.rating?.rate ?? 0);
   }
 
-  public get hasHalfStar(): boolean {
-    return this.rating.rate % 1 >= 0.5;
+    public get hasHalfStar(): boolean {
+    return (this.rating?.rate ?? 0) % 1 >= 0.5;
   }
 
-  public get emptyStars(): number {
-    return 5 - Math.ceil(this.rating.rate);
+   public get emptyStars(): number {
+    return 5 - Math.ceil(this.rating?.rate ?? 0);
   }
 
   public get formattedCategory(): string {

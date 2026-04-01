@@ -2,50 +2,83 @@
   <div class="favorite-item-premium">
     <!-- Glow Effect no Card -->
     <div class="card-glow-premium"></div>
-    
+
     <div class="item-image-premium" @click="goToProduct">
       <div class="image-wrapper-premium">
-        <img :src="product.image" :alt="product.title">
+        <img :src="product.image" :alt="product.title" />
         <div class="image-overlay-premium"></div>
         <div class="image-shine-premium"></div>
       </div>
     </div>
-    
+
     <div class="item-info-premium">
       <div class="info-header-premium">
-        <h3 class="item-title-premium" @click="goToProduct">{{ truncateTitle(product.title) }}</h3>
+        <h3 class="item-title-premium" @click="goToProduct">
+          {{ truncateTitle(product.title) }}
+        </h3>
         <div class="category-badge-premium">
           <span class="badge-dot"></span>
           {{ getCategoryName(product.category) }}
         </div>
       </div>
-      
+
       <div class="item-price-premium">
         <span class="price-label">Preço especial</span>
         <span class="price-value">R$ {{ formatPrice(product.price) }}</span>
       </div>
-      
-      <div class="item-rating-premium">
+
+      <div class="item-rating-premium" v-if="product.rating">
         <div class="stars-premium">
-          <span v-for="i in 5" :key="i" class="star-premium" :class="{ filled: i <= Math.floor(product.rating?.rate || 0) }">
+          <span
+            v-for="i in 5"
+            :key="i"
+            class="star-premium"
+            :class="{ filled: i <= Math.floor(product.rating.rate || 0) }"
+          >
             ★
           </span>
         </div>
-        <span class="rating-count" v-if="product.rating?.count">({{ product.rating.count }})</span>
+        <span class="rating-count" v-if="product.rating.count"
+          >({{ product.rating.count }})</span
+        >
+      </div>
+      <div class="item-rating-premium" v-else>
+        <div class="stars-premium">
+          <span v-for="i in 5" :key="i" class="star-premium">☆</span>
+        </div>
+        <span class="rating-count">(0)</span>
       </div>
     </div>
-    
+
     <div class="item-actions-premium">
       <button class="action-btn-premium view-btn-premium" @click="goToProduct">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z" stroke="currentColor" stroke-width="1.5"/>
-          <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <path
+            d="M1 12C1 12 5 4 12 4C19 4 23 12 23 12C23 12 19 20 12 20C5 20 1 12 1 12Z"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="3"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
         </svg>
         <span>Ver detalhes</span>
       </button>
-      <button class="action-btn-premium remove-btn-premium" @click="removeFavorite">
+      <button
+        class="action-btn-premium remove-btn-premium"
+        @click="removeFavorite"
+      >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path
+            d="M18 6L6 18M6 6L18 18"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
         </svg>
         <span>Remover</span>
       </button>
@@ -54,56 +87,56 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { useFavoritesStore } from '../stores/favorites'
-import { useToast } from '../plugins/toast'
-import type { Product } from '../types'
+import { useRouter } from "vue-router";
+import { useFavoritesStore } from "../stores/favorites";
+import { useToast } from "../plugins/toast";
+import type { Product } from "../types";
 
 const props = defineProps<{
-  product: Product
-}>()
+  product: Product;
+}>();
 
-const router = useRouter()
-const favoritesStore = useFavoritesStore()
-const toast = useToast()
+const router = useRouter();
+const favoritesStore = useFavoritesStore();
+const toast = useToast();
 
 const formatPrice = (price: number) => {
-  return price.toFixed(2).replace('.', ',')
-}
+  return price.toFixed(2).replace(".", ",");
+};
 
 const getCategoryName = (category: any): string => {
-  if (!category) return 'Sem categoria'
-  if (typeof category === 'string') return category
-  return category.name || 'Categoria'
-}
+  if (!category) return "Sem categoria";
+  if (typeof category === "string") return category;
+  return category.name || "Categoria";
+};
 
 const formatCategory = (category: string) => {
   const categories: Record<string, string> = {
     "men's clothing": "Moda Masculina",
     "women's clothing": "Moda Feminina",
-    "jewelery": "Jóias Exclusivas",
-    "electronics": "Tecnologia Premium"
-  }
-  return categories[category] || category
-}
+    jewelery: "Jóias Exclusivas",
+    electronics: "Tecnologia Premium",
+  };
+  return categories[category] || category;
+};
 
 const truncateTitle = (title: string) => {
-  return title.length > 60 ? title.substring(0, 57) + '...' : title
-}
+  return title.length > 60 ? title.substring(0, 57) + "..." : title;
+};
 
 const goToProduct = () => {
-  router.push(`/product/${props.product.id}`)
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
+  router.push(`/product/${props.product.id}`);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 const removeFavorite = () => {
-  favoritesStore.removeFromFavorites(props.product.id)
+  favoritesStore.removeFromFavorites(props.product.id);
   toast.info(
-    'Removido dos favoritos',
-    `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? '...' : ''} foi removido dos favoritos.`,
-    2000
-  )
-}
+    "Removido dos favoritos",
+    `${props.product.title.substring(0, 50)}${props.product.title.length > 50 ? "..." : ""} foi removido dos favoritos.`,
+    2000,
+  );
+};
 </script>
 
 <style scoped>
@@ -123,10 +156,18 @@ const removeFavorite = () => {
   animation: fadeInItem 0.5s ease backwards;
 }
 
-.favorite-item-premium:nth-child(1) { animation-delay: 0.05s; }
-.favorite-item-premium:nth-child(2) { animation-delay: 0.1s; }
-.favorite-item-premium:nth-child(3) { animation-delay: 0.15s; }
-.favorite-item-premium:nth-child(4) { animation-delay: 0.2s; }
+.favorite-item-premium:nth-child(1) {
+  animation-delay: 0.05s;
+}
+.favorite-item-premium:nth-child(2) {
+  animation-delay: 0.1s;
+}
+.favorite-item-premium:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.favorite-item-premium:nth-child(4) {
+  animation-delay: 0.2s;
+}
 
 @keyframes fadeInItem {
   from {
@@ -151,7 +192,12 @@ const removeFavorite = () => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.08), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.08),
+    transparent
+  );
   transition: left 0.6s ease;
   pointer-events: none;
 }
@@ -198,7 +244,11 @@ const removeFavorite = () => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, transparent 50%, rgba(212, 175, 55, 0.1) 100%);
+  background: radial-gradient(
+    circle,
+    transparent 50%,
+    rgba(212, 175, 55, 0.1) 100%
+  );
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -214,7 +264,12 @@ const removeFavorite = () => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.2),
+    transparent
+  );
   transition: left 0.5s ease;
   pointer-events: none;
 }
@@ -278,7 +333,8 @@ const removeFavorite = () => {
 }
 
 @keyframes pulseDot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.5;
     transform: scale(1);
   }
@@ -307,7 +363,7 @@ const removeFavorite = () => {
 .price-value {
   font-size: 1.3rem;
   font-weight: 700;
-  background: linear-gradient(135deg, var(--gold-primary) 0%, #F5E6A0 100%);
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #f5e6a0 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -365,13 +421,18 @@ const removeFavorite = () => {
 }
 
 .action-btn-premium::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.2),
+    transparent
+  );
   transition: left 0.4s ease;
 }
 
@@ -413,41 +474,41 @@ const removeFavorite = () => {
     gap: 20px;
     padding: 20px;
   }
-  
+
   .item-image-premium {
     width: 130px;
     height: 130px;
   }
-  
+
   .info-header-premium {
     flex-direction: column;
     align-items: center;
     text-align: center;
   }
-  
+
   .item-title-premium {
     text-align: center;
   }
-  
+
   .item-price-premium {
     justify-content: center;
   }
-  
+
   .item-rating-premium {
     justify-content: center;
   }
-  
+
   .item-actions-premium {
     width: 100%;
     justify-content: center;
   }
-  
+
   .action-btn-premium {
     flex: 1;
     justify-content: center;
     padding: 10px 16px;
   }
-  
+
   .action-btn-premium span {
     font-size: 0.8rem;
   }
@@ -459,35 +520,35 @@ const removeFavorite = () => {
     gap: 16px;
     border-radius: 20px;
   }
-  
+
   .item-image-premium {
     width: 100px;
     height: 100px;
   }
-  
+
   .item-title-premium {
     font-size: 0.9rem;
   }
-  
+
   .category-badge-premium {
     font-size: 0.65rem;
     padding: 3px 10px;
   }
-  
+
   .price-value {
     font-size: 1.1rem;
   }
-  
+
   .action-btn-premium {
     padding: 8px 14px;
     gap: 6px;
   }
-  
+
   .action-btn-premium svg {
     width: 16px;
     height: 16px;
   }
-  
+
   .action-btn-premium span {
     font-size: 0.75rem;
   }

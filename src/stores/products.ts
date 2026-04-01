@@ -77,7 +77,7 @@ export const useProductsStore = defineStore("products", () => {
     }
   };
 
-  // stores/products.ts - Atualizar o método processProductsData
+// stores/products.ts
 const processProductsData = (data: any[]): void => {
   if (!Array.isArray(data)) {
     console.error("processProductsData: data não é um array", data);
@@ -85,8 +85,21 @@ const processProductsData = (data: any[]): void => {
     return;
   }
 
-  // Usar o método estático da classe Product
-  products.value = Product.fromAPIList(data);
+  // 🔥 NORMALIZAR DADOS ANTES DE CRIAR A CLASSE
+  const normalizedData = data.map(item => ({
+    ...item,
+    // Garantir que rating existe
+    rating: item.rating && typeof item.rating === 'object'
+      ? { rate: item.rating.rate ?? 0, count: item.rating.count ?? 0 }
+      : { rate: 0, count: 0 },
+    // Garantir que images é array
+    images: Array.isArray(item.images) ? item.images : 
+            item.image ? [item.image] : [],
+    // Garantir que category é objeto (ou string)
+    category: item.category || { id: 0, name: "Sem categoria" }
+  }));
+
+  products.value = Product.fromAPIList(normalizedData);
   console.log("Produtos processados:", products.value.length);
 };
 

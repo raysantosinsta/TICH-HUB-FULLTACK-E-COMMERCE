@@ -27,10 +27,14 @@
           </div>
           <div class="product-info">
             <h3 class="product-title">{{ truncateTitle(product.title) }}</h3>
-            <div class="product-rating">
-              <span class="stars">{{ getStarRating(product.rating.rate) }}</span>
-              <span class="rating-count">({{ product.rating.count }})</span>
-            </div>
+            <div class="product-rating" v-if="product.rating">
+  <span class="stars">{{ getStarRating(product.rating.rate) }}</span>
+  <span class="rating-count">({{ product.rating.count }})</span>
+</div>
+<div class="product-rating" v-else>
+  <span class="stars">☆☆☆☆☆</span>
+  <span class="rating-count">(0)</span>
+</div>
             <div class="product-price">
               <span class="price">${{ product.price.toFixed(2) }}</span>
               <button class="add-to-cart">Add to Cart</button>
@@ -62,7 +66,7 @@ const truncateTitle = (title: string): string => {
   return title;
 };
 
-const getStarRating = (rate: number): string => {
+const getStarRating = (rate: number = 0): string => {
   const fullStars = Math.floor(rate);
   const hasHalfStar = rate % 1 >= 0.5;
   let stars = '★'.repeat(fullStars);
