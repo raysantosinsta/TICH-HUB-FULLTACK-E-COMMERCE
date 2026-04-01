@@ -5,7 +5,7 @@ import { Product } from "../models/product.model";
 export const useProductsStore = defineStore("products", () => {
   // ========== CONSTANTES ==========
   // Opção 1: Usar proxy CORS
-const API_BASE_URL = 'https://cors-anywhere.com/https://fakestoreapi.com/products'
+const API_BASE_URL = 'https://api.allorigins.win/raw?url=https://fakestoreapi.com/products';
 
   // ========== ESTADO ==========
   const products = ref<Product[]>([]);
