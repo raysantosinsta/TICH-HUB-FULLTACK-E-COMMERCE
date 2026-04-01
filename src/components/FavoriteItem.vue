@@ -16,7 +16,7 @@
         <h3 class="item-title-premium" @click="goToProduct">{{ truncateTitle(product.title) }}</h3>
         <div class="category-badge-premium">
           <span class="badge-dot"></span>
-          {{ formatCategory(product.category) }}
+          {{ getCategoryName(product.category) }}
         </div>
       </div>
       
@@ -69,6 +69,12 @@ const toast = useToast()
 
 const formatPrice = (price: number) => {
   return price.toFixed(2).replace('.', ',')
+}
+
+const getCategoryName = (category: any): string => {
+  if (!category) return 'Sem categoria'
+  if (typeof category === 'string') return category
+  return category.name || 'Categoria'
 }
 
 const formatCategory = (category: string) => {

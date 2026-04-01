@@ -1,7 +1,7 @@
 <template>
   <div class="product-card" @click="viewProduct">
     <div class="product-image">
-      <img :src="product.image" :alt="product.title">
+      <img :src="productImage" :alt="product.title">
       <div class="image-overlay">
         <span class="quick-view">Ver detalhes</span>
       </div>
@@ -16,12 +16,12 @@
     </div>
     <div class="product-info">
       <h3 class="product-title">{{ truncateTitle(product.title) }}</h3>
-      <div class="product-rating">
+      <div class="product-rating" v-if="hasRating">
         <span class="stars">{{ getStarRating(product.rating.rate) }}</span>
         <span class="count">({{ product.rating.count }})</span>
       </div>
       <div class="product-price">
-        <span class="price">R$ {{ formatPrice(product.price) }}</span>
+        <span class="price">{{ formatPrice(product.price) }}</span>
         <div class="add-to-cart-wrapper">
           <button 
             class="add-to-cart" 
@@ -71,7 +71,26 @@ const emit = defineEmits<{
 
 const isAuthenticated = computed(() => authStore.isAuthenticated)
 
+// Função para obter a imagem do produto
+const productImage = computed(() => {
+  if (props.product.images && props.product.images.length > 0) {
+    return props.product.images[0]
+  }
+  if (props.product.image) {
+    return props.product.image
+  }
+  return '/placeholder-image.jpg'
+})
+
+// Verificar se o produto tem rating
+const hasRating = computed(() => {
+  return props.product.rating && 
+         props.product.rating.rate !== undefined && 
+         props.product.rating.count !== undefined
+})
+
 const truncateTitle = (title: string) => {
+  if (!title) return ""
   return title.length > 50 ? title.substring(0, 47) + '...' : title
 }
 
@@ -86,7 +105,11 @@ const getStarRating = (rate: number) => {
 }
 
 const formatPrice = (price: number) => {
-  return price.toFixed(2).replace('.', ',')
+  return price.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2
+  })
 }
 
 const viewProduct = () => {
@@ -104,7 +127,7 @@ const handleFavoriteClick = (event: MouseEvent) => {
       'Faça login para adicionar produtos aos favoritos.',
       4000
     )
-    // Redirecionar para página de login e depois voltar para favoritos
+    // Redirecionar para página de login
     setTimeout(() => {
       router.push({
         path: '/login',
@@ -115,7 +138,6 @@ const handleFavoriteClick = (event: MouseEvent) => {
   }
   
   // Se estiver logado, apenas atualiza o favorito
-  // O FavoriteButton já lida com a lógica de favoritar
   console.log('Favoritando produto:', props.product.title)
 }
 
@@ -130,7 +152,6 @@ const addToCart = async (event: MouseEvent) => {
       'Faça login para adicionar produtos ao carrinho.',
       4000
     )
-    // Redirecionar para login após 1.5 segundos
     setTimeout(() => {
       router.push('/login')
     }, 1500)
@@ -161,7 +182,6 @@ const addToCart = async (event: MouseEvent) => {
 }
 
 const onFavoriteUpdate = (isFavorited: boolean) => {
-  // Evento já tratado no componente FavoriteButton
   console.log('Favorite status updated:', isFavorited)
 }
 </script>
@@ -225,7 +245,7 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   opacity: 1;
 }
 
-/* CORREÇÃO: Ícone de favorito posicionado no canto superior direito */
+/* Ícone de favorito posicionado no canto superior direito */
 .favorite-overlay {
   position: absolute;
   top: 12px;
@@ -397,7 +417,7 @@ const onFavoriteUpdate = (isFavorited: boolean) => {
   to { transform: rotate(360deg); }
 }
 
-/* CORREÇÃO: Garantir que o ícone de favorito não fique no meio */
+/* Estilos para o ícone de favorito dentro do componente */
 .favorite-overlay :deep(.favorite-btn-premium) {
   background: rgba(0, 0, 0, 0.6) !important;
   backdrop-filter: blur(8px) !important;

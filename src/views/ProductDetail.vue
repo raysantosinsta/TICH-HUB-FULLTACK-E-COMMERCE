@@ -56,21 +56,36 @@
       <div v-else-if="product" class="product-content-premium">
         <!-- Seção Principal - Imagem e Info com Glassmorphism -->
         <div class="product-main-premium">
-          <!-- Imagem do Produto com Efeitos 3D -->
+          <!-- Imagem do Produto com Galeria -->
           <div class="product-image-section-premium">
+            <!-- Imagem Principal -->
             <div class="main-image-container-premium">
               <div class="image-wrapper-premium">
                 <img
-                  :src="product.image"
+                  :src="currentImage"
                   :alt="product.title"
                   class="main-image-premium"
+                  @error="handleImageError"
                 />
                 <div class="image-glow-premium"></div>
                 <div class="image-shine-premium"></div>
               </div>
               <div class="image-reflection-premium"></div>
-              <div class="image-badge" v-if="product.rating.rate >= 4.5">
-                <span>⭐ Mais Vendido</span>
+              <div class="image-badge" v-if="isNewProduct">
+                <span>✨ Novo</span>
+              </div>
+            </div>
+
+            <!-- Miniaturas das Imagens -->
+            <div v-if="product.images && product.images.length > 1" class="thumbnail-gallery-premium">
+              <div
+                v-for="(img, index) in product.images"
+                :key="index"
+                class="thumbnail-premium"
+                :class="{ active: currentImageIndex === index }"
+                @click="selectImage(index)"
+              >
+                <img :src="img" :alt="`${product.title} - imagem ${index + 1}`" @error="handleThumbError" />
               </div>
             </div>
           </div>
@@ -84,42 +99,17 @@
                   fill="currentColor"
                 />
               </svg>
-              {{ formatCategory(product.category) }}
+              {{ getCategoryName() }}
             </div>
             <h1 class="product-title-premium">{{ product.title }}</h1>
-
-            <!-- Avaliação Premium -->
-            <div class="rating-section-premium">
-              <div class="stars-premium">
-                <span
-                  v-for="i in 5"
-                  :key="i"
-                  class="star-premium"
-                  :class="{
-                    filled: i <= Math.floor(product.rating.rate),
-                    half:
-                      i === Math.ceil(product.rating.rate) &&
-                      product.rating.rate % 1 >= 0.5,
-                  }"
-                >
-                  ★
-                </span>
-              </div>
-              <span class="rating-value-premium"
-                >{{ product.rating.rate }} de 5</span
-              >
-              <span class="reviews-count-premium"
-                >({{ product.rating.count }} avaliações)</span
-              >
-            </div>
 
             <!-- Preço Premium -->
             <div class="price-section-premium">
               <div class="price-premium">
-                 {{ formatPrice(product.price) }}
+                {{ formatPrice(product.price) }}
               </div>
-              <div class="installment-premium">
-                ou 12x de  {{ formatPrice(product.price / 12) }} sem juros
+              <div class="installment-premium" v-if="product.price && product.price > 0">
+                ou 12x de {{ formatPrice(product.price / 12) }} sem juros
               </div>
               <div class="stock-info-premium">
                 <span class="stock-badge-premium">
@@ -131,7 +121,7 @@
             </div>
 
             <!-- Descrição Curta -->
-            <p class="short-description-premium">
+            <p class="short-description-premium" v-if="product.description">
               {{ truncateDescription(product.description, 180) }}
             </p>
 
@@ -223,35 +213,32 @@
               </div>
             </div>
 
-           
-
-            <!-- Mensagem para Usuário Logado -->
             <!-- Mensagens com transição -->
-<transition name="fade-premium">
-  <div v-if="!isAuthenticated" key="guest" class="guest-message-premium-card">
-    <div class="guest-message-premium-icon">🔒</div>
-    <div class="guest-message-premium-content">
-      <h4>Acesso Exclusivo para Membros</h4>
-      <p>Faça login para adicionar produtos ao carrinho e aproveitar benefícios exclusivos.</p>
-      <button class="login-action-premium" @click="goToLogin">
-        Fazer login agora
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-          <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-</transition>
+            <transition name="fade-premium">
+              <div v-if="!isAuthenticated" key="guest" class="guest-message-premium-card">
+                <div class="guest-message-premium-icon">🔒</div>
+                <div class="guest-message-premium-content">
+                  <h4>Acesso Exclusivo para Membros</h4>
+                  <p>Faça login para adicionar produtos ao carrinho e aproveitar benefícios exclusivos.</p>
+                  <button class="login-action-premium" @click="goToLogin">
+                    Fazer login agora
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </transition>
 
-<transition name="fade-premium">
-  <div v-if="isAuthenticated" key="welcome" class="welcome-message-premium">
-    <div class="welcome-avatar">{{ userInitials }}</div>
-    <div class="welcome-content">
-      <span>Olá, <strong>{{ user?.name?.split(' ')[0] }}</strong>!</span>
-      <span>Este produto está pronto para ser seu</span>
-    </div>
-  </div>
-</transition>
+            <transition name="fade-premium">
+              <div v-if="isAuthenticated" key="welcome" class="welcome-message-premium">
+                <div class="welcome-avatar">{{ userInitials }}</div>
+                <div class="welcome-content">
+                  <span>Olá, <strong>{{ user?.name?.split(' ')[0] || 'Usuário' }}</strong>!</span>
+                  <span>Este produto está pronto para ser seu</span>
+                </div>
+              </div>
+            </transition>
           </div>
         </div>
 
@@ -315,7 +302,7 @@
                 class="description-premium"
               >
                 <h3>📝 Sobre este produto</h3>
-                <p>{{ product.description }}</p>
+                <p>{{ product.description || 'Descrição não disponível' }}</p>
 
                 <h3>✨ Características exclusivas</h3>
                 <ul class="features-premium">
@@ -352,26 +339,26 @@
                   <div class="spec-card-premium">
                     <span class="spec-label-premium">Categoria</span>
                     <span class="spec-value-premium">{{
-                      formatCategory(product.category)
+                      getCategoryName()
                     }}</span>
                   </div>
                   <div class="spec-card-premium">
                     <span class="spec-label-premium">SKU</span>
-                    <span class="spec-value-premium"
-                      >PROD-{{ product.id.toString().padStart(6, "0") }}</span
-                    >
+                    <span class="spec-value-premium">{{
+                      getSku()
+                    }}</span>
                   </div>
                   <div class="spec-card-premium">
-                    <span class="spec-label-premium">Avaliação</span>
-                    <span class="spec-value-premium"
-                      >{{ product.rating.rate }} / 5.0</span
-                    >
+                    <span class="spec-label-premium">Data de Cadastro</span>
+                    <span class="spec-value-premium">{{
+                      formatDate(product.creationAt)
+                    }}</span>
                   </div>
                   <div class="spec-card-premium">
-                    <span class="spec-label-premium">Avaliações</span>
-                    <span class="spec-value-premium"
-                      >{{ product.rating.count }} clientes</span
-                    >
+                    <span class="spec-label-premium">Última Atualização</span>
+                    <span class="spec-value-premium">{{
+                      formatDate(product.updatedAt)
+                    }}</span>
                   </div>
                   <div class="spec-card-premium">
                     <span class="spec-label-premium">Peso</span>
@@ -453,7 +440,7 @@
               @click="goToProduct(related.id)"
             >
               <div class="card-image-premium">
-                <img :src="related.image" :alt="related.title" />
+                <img :src="getProductImage(related)" :alt="related.title" @error="handleRelatedImageError" />
                 <div class="card-overlay">
                   <span>Ver detalhes</span>
                 </div>
@@ -463,11 +450,7 @@
                   {{ truncateTitle(related.title, 50) }}
                 </h3>
                 <div class="card-price-premium">
-                  R$ {{ formatPrice(related.price) }}
-                </div>
-                <div class="card-rating-premium">
-                  <span>★</span>
-                  <span>{{ related.rating.rate }}</span>
+                  {{ formatPrice(related.price) }}
                 </div>
               </div>
             </div>
@@ -507,7 +490,6 @@ import { useProductsStore } from "../stores/products";
 import { useCartStore } from "../stores/cart";
 import { useAuthStore } from "../stores/auth";
 import { useToast } from "../plugins/toast";
-import type { Product } from "../types";
 
 const route = useRoute();
 const router = useRouter();
@@ -516,53 +498,181 @@ const cartStore = useCartStore();
 const authStore = useAuthStore();
 const toast = useToast();
 
-const product = ref<Product | null>(null);
+const product = ref<any>(null);
 const loading = ref(true);
 const activeTab = ref("description");
 const addingToCart = ref(false);
 const buyingNow = ref(false);
+const currentImageIndex = ref(0);
 
+// Função para obter SKU
+const getSku = () => {
+  if (!product.value || product.value.id === undefined || product.value.id === null) {
+    return "PROD-000000";
+  }
+  return `PROD-${String(product.value.id).padStart(6, "0")}`;
+};
+
+// Função para obter imagem do produto
+const getProductImage = (prod: any) => {
+  if (!prod) return "/placeholder-image.jpg";
+  
+  if (prod.images && Array.isArray(prod.images) && prod.images.length > 0) {
+    return prod.images[0];
+  }
+  
+  if (prod.image && typeof prod.image === 'string' && prod.image.startsWith('http')) {
+    return prod.image;
+  }
+  
+  return "/placeholder-image.jpg";
+};
+
+// Computed para imagem atual
+const currentImage = computed(() => {
+  return getProductImage(product.value);
+});
+
+// Tratamento de erro de imagem
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  img.src = "/placeholder-image.jpg";
+};
+
+const handleThumbError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  img.src = "/placeholder-image.jpg";
+};
+
+const handleRelatedImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  img.src = "/placeholder-image.jpg";
+};
+
+// Função segura para obter nome da categoria
+const getCategoryName = () => {
+  if (!product.value) return "Categoria";
+  
+  try {
+    if (product.value.category && typeof product.value.category === 'object') {
+      if (product.value.category.name) {
+        return formatCategory(product.value.category.name);
+      }
+    }
+    
+    if (typeof product.value.category === 'string') {
+      return formatCategory(product.value.category);
+    }
+  } catch (e) {
+    console.error("Erro ao obter categoria:", e);
+  }
+  
+  return "Produto";
+};
+
+// Verificar se produto é novo
+const isNewProduct = computed(() => {
+  if (!product.value?.creationAt) return false;
+  try {
+    const createdDate = new Date(product.value.creationAt);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays <= 7;
+  } catch (e) {
+    return false;
+  }
+});
+
+// Produtos relacionados
 const relatedProducts = computed(() => {
   if (!product.value) return [];
-  return store.products
-    .filter(
-      (p) =>
-        p.id !== product.value?.id && p.category === product.value?.category,
-    )
-    .slice(0, 4);
+  
+  try {
+    const currentCategoryId = product.value.category?.id;
+    const currentCategoryName = typeof product.value.category === 'string' 
+      ? product.value.category 
+      : product.value.category?.name;
+    
+    return store.products
+      .filter((p: any) => {
+        if (p.id === product.value?.id) return false;
+        
+        if (currentCategoryId && p.category?.id === currentCategoryId) return true;
+        
+        const pCategoryName = typeof p.category === 'string' ? p.category : p.category?.name;
+        if (currentCategoryName && pCategoryName === currentCategoryName) return true;
+        
+        return false;
+      })
+      .slice(0, 4);
+  } catch (e) {
+    console.error("Erro ao buscar produtos relacionados:", e);
+    return [];
+  }
 });
 
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const user = computed(() => authStore.user);
 
 const userInitials = computed(() => {
-  if (!user.value) return "";
-  return user.value.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+  if (!user.value || !user.value.name) return "U";
+  try {
+    return user.value.name
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  } catch (e) {
+    return "U";
+  }
 });
 
-const formatPrice = (price: number) => {
-  return price.toLocaleString("pt-BR", {
+const formatPrice = (price: any) => {
+  if (price === undefined || price === null) {
+    return "R$ 0,00";
+  }
+  
+  const numPrice = typeof price === 'number' ? price : Number(price);
+  
+  if (isNaN(numPrice)) {
+    return "R$ 0,00";
+  }
+  
+  return numPrice.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
   });
 };
 
-const formatCategory = (category: string) => {
+const formatCategory = (categoryName: string) => {
+  if (!categoryName) return "Produto";
+  
   const categories: Record<string, string> = {
     "men's clothing": "Moda Masculina",
     "women's clothing": "Moda Feminina",
     jewelery: "Jóias Exclusivas",
-    electronics: "Tecnologia",
+    electronics: "Eletrônicos",
+    furniture: "Móveis",
+    shoes: "Calçados",
+    miscellaneous: "Diversos",
+    clothes: "Roupas"
   };
-  return categories[category] || category;
+  return categories[categoryName.toLowerCase()] || categoryName;
+};
+
+const formatDate = (dateString: string) => {
+  if (!dateString) return "Não disponível";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("pt-BR");
+  } catch (e) {
+    return "Data inválida";
+  }
 };
 
 const truncateTitle = (title: string, length: number = 60) => {
+  if (!title) return "";
   if (title.length > length) {
     return title.substring(0, length - 3) + "...";
   }
@@ -570,6 +680,7 @@ const truncateTitle = (title: string, length: number = 60) => {
 };
 
 const truncateDescription = (description: string, length: number = 200) => {
+  if (!description) return "";
   if (description.length > length) {
     return description.substring(0, length - 3) + "...";
   }
@@ -587,13 +698,19 @@ const getParticleStyle = (index: number) => {
   };
 };
 
+const selectImage = (index: number) => {
+  currentImageIndex.value = index;
+};
+
 const addToCart = async () => {
   if (!isAuthenticated.value) {
-    toast.warning(
-      "Login necessário",
-      "Faça login para adicionar produtos ao carrinho.",
-      4000,
-    );
+    if (toast?.warning) {
+      toast.warning(
+        "Login necessário",
+        "Faça login para adicionar produtos ao carrinho.",
+        4000,
+      );
+    }
     setTimeout(() => router.push("/login"), 1500);
     return;
   }
@@ -603,18 +720,31 @@ const addToCart = async () => {
   addingToCart.value = true;
 
   try {
-    cartStore.addToCart(product.value, 1);
-    toast.success(
-      "Produto adicionado!",
-      `${product.value.title.substring(0, 50)}... foi adicionado ao carrinho.`,
-      3000,
-    );
+    const cartProduct = {
+      id: product.value.id,
+      title: product.value.title || "Produto",
+      price: product.value.price || 0,
+      image: getProductImage(product.value),
+      description: product.value.description || "",
+      category: getCategoryName(),
+    };
+    cartStore.addToCart(cartProduct, 1);
+    if (toast?.success) {
+      toast.success(
+        "Produto adicionado!",
+        `${(product.value.title || "Produto").substring(0, 50)}... foi adicionado ao carrinho.`,
+        3000,
+      );
+    }
   } catch (error) {
-    toast.error(
-      "Erro",
-      "Não foi possível adicionar o produto ao carrinho.",
-      3000,
-    );
+    console.error("Erro ao adicionar ao carrinho:", error);
+    if (toast?.error) {
+      toast.error(
+        "Erro",
+        "Não foi possível adicionar o produto ao carrinho.",
+        3000,
+      );
+    }
   } finally {
     setTimeout(() => {
       addingToCart.value = false;
@@ -624,11 +754,13 @@ const addToCart = async () => {
 
 const buyNow = async () => {
   if (!isAuthenticated.value) {
-    toast.warning(
-      "Login necessário",
-      "Faça login para finalizar a compra.",
-      4000,
-    );
+    if (toast?.warning) {
+      toast.warning(
+        "Login necessário",
+        "Faça login para finalizar a compra.",
+        4000,
+      );
+    }
     setTimeout(() => router.push("/login"), 1500);
     return;
   }
@@ -638,18 +770,31 @@ const buyNow = async () => {
   buyingNow.value = true;
 
   try {
-    cartStore.addToCart(product.value, 1);
-    toast.success(
-      "Compra iniciada!",
-      "Redirecionando para o carrinho...",
-      2000,
-    );
+    const cartProduct = {
+      id: product.value.id,
+      title: product.value.title || "Produto",
+      price: product.value.price || 0,
+      image: getProductImage(product.value),
+      description: product.value.description || "",
+      category: getCategoryName(),
+    };
+    cartStore.addToCart(cartProduct, 1);
+    if (toast?.success) {
+      toast.success(
+        "Compra iniciada!",
+        "Redirecionando para o carrinho...",
+        2000,
+      );
+    }
     setTimeout(() => {
       router.push("/cart");
       buyingNow.value = false;
     }, 1500);
   } catch (error) {
-    toast.error("Erro", "Não foi possível iniciar a compra.", 3000);
+    console.error("Erro ao comprar:", error);
+    if (toast?.error) {
+      toast.error("Erro", "Não foi possível iniciar a compra.", 3000);
+    }
     buyingNow.value = false;
   }
 };
@@ -661,22 +806,73 @@ const goToProduct = (id: number) => {
 };
 
 onMounted(async () => {
-  const id = Number(route.params.id);
-  if (store.products.length === 0) await store.fetchProducts();
-  product.value = store.getProductById(id) || null;
-  loading.value = false;
+  try {
+    const id = Number(route.params.id);
+    
+    if (store.products.length === 0) {
+      await store.fetchProducts();
+    }
+    
+    let foundProduct = store.products.find((p: any) => p.id === id);
+    
+    if (!foundProduct) {
+      try {
+        const response = await fetch(`https://api.escuelajs.co/api/v1/products/${id}`);
+        if (response.ok) {
+          const data = await response.json();
+          foundProduct = data;
+        }
+      } catch (err) {
+        console.error("Erro ao buscar produto da API:", err);
+      }
+    }
+    
+    if (foundProduct) {
+      product.value = {
+        id: foundProduct.id,
+        title: foundProduct.title || "Produto",
+        price: foundProduct.price !== undefined ? foundProduct.price : 0,
+        description: foundProduct.description || "",
+        category: foundProduct.category || "",
+        image: foundProduct.image || foundProduct.images?.[0] || "",
+        images: foundProduct.images || [],
+        creationAt: foundProduct.creationAt,
+        updatedAt: foundProduct.updatedAt,
+      };
+      
+      console.log("Produto carregado:", product.value);
+    } else {
+      product.value = null;
+    }
+    
+    loading.value = false;
 
-  if (!product.value) {
-    toast.error(
-      "Produto não encontrado",
-      "O produto que você procura não existe.",
-      4000,
-    );
+    if (!product.value && toast?.error) {
+      toast.error(
+        "Produto não encontrado",
+        "O produto que você procura não existe.",
+        4000,
+      );
+    }
+  } catch (error) {
+    console.error("Erro ao carregar produto:", error);
+    loading.value = false;
+    product.value = null;
+    if (toast?.error) {
+      toast.error(
+        "Erro",
+        "Não foi possível carregar o produto.",
+        4000,
+      );
+    }
   }
 });
 </script>
 
+
+
 <style scoped>
+/* Mantenha todos os estilos existentes */
 /* ========== PRODUCT DETAIL PREMIUM ========== */
 .product-detail-premium {
   position: relative;
@@ -1059,6 +1255,42 @@ onMounted(async () => {
   }
 }
 
+/* Thumbnail Gallery */
+.thumbnail-gallery-premium {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.thumbnail-premium {
+  width: 70px;
+  height: 70px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  transition: all 0.3s ease;
+  background: rgba(59, 58, 64, 0.3);
+}
+
+.thumbnail-premium:hover {
+  transform: translateY(-2px);
+  border-color: var(--gold-primary);
+}
+
+.thumbnail-premium.active {
+  border-color: var(--gold-primary);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.5);
+}
+
+.thumbnail-premium img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* Product Info Premium */
 .product-info-section-premium {
   animation: fadeInUpPremium 0.8s ease 0.2s both;
@@ -1087,40 +1319,6 @@ onMounted(async () => {
   color: transparent;
   margin-bottom: 24px;
   line-height: 1.3;
-}
-
-/* Rating Premium */
-.rating-section-premium {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 28px;
-  flex-wrap: wrap;
-}
-
-.stars-premium {
-  display: flex;
-  gap: 4px;
-}
-
-.star-premium {
-  color: rgba(245, 240, 230, 0.3);
-  font-size: 1.1rem;
-}
-
-.star-premium.filled {
-  color: var(--gold-primary);
-}
-
-.star-premium.half {
-  color: var(--gold-primary);
-  position: relative;
-}
-
-.rating-value-premium,
-.reviews-count-premium {
-  color: rgba(245, 240, 230, 0.7);
-  font-size: 0.9rem;
 }
 
 /* Price Premium */
@@ -1285,6 +1483,12 @@ onMounted(async () => {
   border-top-color: currentColor;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Benefits Premium */
@@ -1716,14 +1920,6 @@ onMounted(async () => {
   margin-bottom: 8px;
 }
 
-.card-rating-premium {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--gold-primary);
-  font-size: 0.85rem;
-}
-
 /* Error State Premium */
 .error-premium {
   text-align: center;
@@ -1896,6 +2092,15 @@ onMounted(async () => {
     gap: 20px;
   }
 
+  .thumbnail-gallery-premium {
+    margin-top: 16px;
+  }
+
+  .thumbnail-premium {
+    width: 60px;
+    height: 60px;
+  }
+
   .error-content-premium {
     padding: 32px 24px;
   }
@@ -1928,6 +2133,11 @@ onMounted(async () => {
 
   .tab-premium svg {
     margin: 0;
+  }
+
+  .thumbnail-premium {
+    width: 50px;
+    height: 50px;
   }
 }
 </style>

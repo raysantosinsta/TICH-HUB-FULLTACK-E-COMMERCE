@@ -37,7 +37,7 @@
           @click="navigateToCategory(offer)"
         >
           <div class="offer-image-premium">
-            <img :src="offer.image" :alt="offer.name">
+            <img :src="offer.image" :alt="offer.name" @error="handleImageError">
             <div class="image-overlay-premium"></div>
             <div class="offer-discount-premium">
               <span>{{ offer.discount }}</span>
@@ -65,6 +65,13 @@
           <div class="card-glow-premium"></div>
         </div>
       </div>
+
+      <!-- Mensagem caso não haja produtos -->
+      <div v-if="offers.length === 0 && !store.loading" class="empty-offers-premium">
+        <div class="empty-icon">📦</div>
+        <h3>Nenhuma oferta disponível</h3>
+        <p>Volte em breve para conferir nossas promoções!</p>
+      </div>
     </div>
   </div>
 </template>
@@ -77,69 +84,120 @@ import { useProductsStore } from '../stores/products'
 const router = useRouter()
 const store = useProductsStore()
 
-// Dados das ofertas
-const offers = computed(() => {
-  // Obter produtos por categoria para mostrar faixa de preço
-  const getProductsByCategory = (category: string) => {
-    return store.products.filter(p => p.category === category)
+// Função para obter o nome da categoria do produto
+const getCategoryName = (product: any): string => {
+  if (!product.category) return ""
+  if (typeof product.category === 'object' && product.category.name) {
+    return product.category.name
   }
-
-  const mensProducts = getProductsByCategory("men's clothing")
-  const womensProducts = getProductsByCategory("women's clothing")
-  const jeweleryProducts = getProductsByCategory("jewelery")
-  const electronicsProducts = getProductsByCategory("electronics")
-
-  // Calcular faixa de preço
-  const getPriceRange = (products: any[]) => {
-    if (products.length === 0) return "R$ 0 - R$ 0"
-    const prices = products.map(p => p.price)
-    const min = Math.min(...prices)
-    const max = Math.max(...prices)
-    return `R$ ${min.toFixed(2)} - R$ ${max.toFixed(2)}`
+  if (typeof product.category === 'string') {
+    return product.category
   }
+  return ""
+}
 
-  return [
-    {
-      id: 1,
-      name: "Moda Masculina",
-      category: "men's clothing",
-      icon: "👔",
-      discount: "-40%",
-      description: "Estilo e elegância com até 40% OFF",
-      priceRange: getPriceRange(mensProducts),
-      image: mensProducts[0]?.image || "https://fakestoreapi.com/img/81fPKd-2AYL._AC_SL1500_t.png"
-    },
-    {
-      id: 2,
-      name: "Moda Feminina",
-      category: "women's clothing",
-      icon: "👗",
-      discount: "-35%",
-      description: "Tendências e sofisticação com até 35% OFF",
-      priceRange: getPriceRange(womensProducts),
-      image: womensProducts[0]?.image || "https://fakestoreapi.com/img/51Y5NI-I5jL._AC_UX679_t.png"
-    },
-    {
-      id: 3,
-      name: "Jóias",
-      category: "jewelery",
-      icon: "💍",
-      discount: "-25%",
-      description: "Peças exclusivas com até 25% OFF",
-      priceRange: getPriceRange(jeweleryProducts),
-      image: jeweleryProducts[0]?.image || "https://fakestoreapi.com/img/71pWzhdJNwL._AC_UL640_QL65_ML3_t.png"
-    },
-    {
-      id: 4,
-      name: "Eletrônicos",
-      category: "electronics",
-      icon: "📱",
-      discount: "-50%",
-      description: "Tecnologia de ponta com até 50% OFF",
-      priceRange: getPriceRange(electronicsProducts),
-      image: electronicsProducts[0]?.image || "https://fakestoreapi.com/img/61IBBVJvSDL._AC_SY879_t.png"
+// Função para obter imagem do produto
+const getProductImage = (product: any): string => {
+  if (product.images && product.images.length > 0) {
+    return product.images[0]
+  }
+  if (product.image) {
+    return product.image
+  }
+  return "/placeholder-image.jpg"
+}
+
+// Função para tratar erro de imagem
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.src = "/placeholder-image.jpg"
+}
+
+// Mapeamento de ícones por categoria
+const categoryIcons: Record<string, string> = {
+  "men's clothing": "👔",
+  "women's clothing": "👗",
+  "jewelery": "💍",
+  "electronics": "📱",
+  "furniture": "🪑",
+  "shoes": "👟",
+  "miscellaneous": "🎁",
+  "clothes": "👕"
+}
+
+// Mapeamento de descontos por categoria
+const categoryDiscounts: Record<string, string> = {
+  "men's clothing": "-40%",
+  "women's clothing": "-35%",
+  "jewelery": "-25%",
+  "electronics": "-50%",
+  "furniture": "-30%",
+  "shoes": "-45%",
+  "miscellaneous": "-20%",
+  "clothes": "-35%"
+}
+
+// Mapeamento de descrições por categoria
+const categoryDescriptions: Record<string, string> = {
+  "men's clothing": "Estilo e elegância com até 40% OFF",
+  "women's clothing": "Tendências e sofisticação com até 35% OFF",
+  "jewelery": "Peças exclusivas com até 25% OFF",
+  "electronics": "Tecnologia de ponta com até 50% OFF",
+  "furniture": "Design e conforto com até 30% OFF",
+  "shoes": "Conforto e estilo com até 45% OFF",
+  "miscellaneous": "Produtos diversos com até 20% OFF",
+  "clothes": "Moda de qualidade com até 35% OFF"
+}
+
+// Mapeamento de nomes de exibição
+const categoryDisplayNames: Record<string, string> = {
+  "men's clothing": "Moda Masculina",
+  "women's clothing": "Moda Feminina",
+  "jewelery": "Jóias",
+  "electronics": "Eletrônicos",
+  "furniture": "Móveis",
+  "shoes": "Calçados",
+  "miscellaneous": "Diversos",
+  "clothes": "Roupas"
+}
+
+// Obter categorias únicas dos produtos
+const uniqueCategories = computed(() => {
+  const categoryMap = new Map<string, { name: string; products: any[] }>()
+  
+  store.products.forEach(product => {
+    const categoryName = getCategoryName(product)
+    if (categoryName && !categoryMap.has(categoryName)) {
+      categoryMap.set(categoryName, {
+        name: categoryName,
+        products: store.products.filter(p => getCategoryName(p) === categoryName)
+      })
     }
-  ]
+  })
+  
+  return Array.from(categoryMap.values())
+})
+
+// Ofertas baseadas nas categorias reais
+const offers = computed(() => {
+  // Pegar as primeiras 4 categorias (ou menos se houver menos)
+  return uniqueCategories.value.slice(0, 4).map((cat, index) => {
+    const productsInCategory = cat.products
+    const prices = productsInCategory.map(p => p.price)
+    const minPrice = Math.min(...prices)
+    const maxPrice = Math.max(...prices)
+    
+    return {
+      id: index + 1,
+      name: categoryDisplayNames[cat.name] || cat.name,
+      category: cat.name,
+      icon: categoryIcons[cat.name] || "📦",
+      discount: categoryDiscounts[cat.name] || "-30%",
+      description: categoryDescriptions[cat.name] || `Ofertas especiais para ${categoryDisplayNames[cat.name] || cat.name}`,
+      priceRange: `R$ ${minPrice.toFixed(2).replace('.', ',')} - R$ ${maxPrice.toFixed(2).replace('.', ',')}`,
+      image: productsInCategory[0] ? getProductImage(productsInCategory[0]) : "/placeholder-image.jpg"
+    }
+  })
 })
 
 // Temporizador
@@ -166,7 +224,8 @@ const updateTimer = () => {
 }
 
 const navigateToCategory = (offer: any) => {
-  router.push(`/products?category=${encodeURIComponent(offer.category)}`)
+  const categoryParam = encodeURIComponent(offer.category)
+  router.push(`/products?category=${categoryParam}`)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -342,6 +401,45 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 28px;
+}
+
+/* Empty State */
+.empty-offers-premium {
+  text-align: center;
+  padding: 60px 20px;
+  background: rgba(11, 11, 15, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 40px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  opacity: 0.6;
+  animation: floatEmpty 3s ease-in-out infinite;
+}
+
+@keyframes floatEmpty {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.empty-offers-premium h3 {
+  color: var(--white-soft);
+  margin-bottom: 12px;
+  font-size: 1.3rem;
+}
+
+.empty-offers-premium p {
+  color: rgba(245, 240, 230, 0.6);
+  margin-bottom: 24px;
 }
 
 /* Card Premium */

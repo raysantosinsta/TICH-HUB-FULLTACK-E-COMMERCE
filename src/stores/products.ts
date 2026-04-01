@@ -77,16 +77,18 @@ export const useProductsStore = defineStore("products", () => {
     }
   };
 
-  const processProductsData = (data: any[]): void => {
-    if (!Array.isArray(data)) {
-      console.error("processProductsData: data não é um array", data);
-      products.value = [];
-      return;
-    }
+  // stores/products.ts - Atualizar o método processProductsData
+const processProductsData = (data: any[]): void => {
+  if (!Array.isArray(data)) {
+    console.error("processProductsData: data não é um array", data);
+    products.value = [];
+    return;
+  }
 
-    products.value = Product.fromAPIList(data); // ← Use isso!
-    console.log("Produtos processados:", products.value.length);
-  };
+  // Usar o método estático da classe Product
+  products.value = Product.fromAPIList(data);
+  console.log("Produtos processados:", products.value.length);
+};
 
   /**
    * Define o estado de erro
@@ -190,34 +192,35 @@ export const useProductsStore = defineStore("products", () => {
     return products.value.filter((p) => p.category === category) as Product[];
   };
 
-  const getProductById = async (id: number): Promise<Product | undefined> => {
-    // Primeiro tenta encontrar no estado local
-    const localProduct = products.value.find((p) => p.id === id);
-    if (localProduct) {
-      return localProduct as any;
-    }
+  // stores/products.ts - Atualizar getProductById
+const getProductById = async (id: number): Promise<Product | undefined> => {
+  // Primeiro tenta encontrar no estado local
+  const localProduct = products.value.find((p) => p.id === id);
+  if (localProduct) {
+    return localProduct as any;
+  }
 
-    try {
-      const url = `${API_BASE_URL}/${id}`;
-      const response = await fetch(url);
-      if (!response.ok) {
-        console.error(`HTTP ${response.status} ao buscar produto ${id}`);
-        return undefined;
-      }
-
-      const data = await response.json();
-      if (!data || Object.keys(data).length === 0) {
-        return undefined;
-      }
-
-      // Usa o método estático (muito mais limpo)
-      const product = Product.fromAPI(data);
-      return product;
-    } catch (err) {
-      console.error("Erro ao buscar produto:", err);
+  try {
+    const url = `${API_BASE_URL}/${id}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.error(`HTTP ${response.status} ao buscar produto ${id}`);
       return undefined;
     }
-  };
+
+    const data = await response.json();
+    if (!data || Object.keys(data).length === 0) {
+      return undefined;
+    }
+
+    // Usa o método estático
+    const product = Product.fromAPI(data);
+    return product;
+  } catch (err) {
+    console.error("Erro ao buscar produto:", err);
+    return undefined;
+  }
+};
 
   /**
    * Busca produtos por termo de pesquisa (local)

@@ -1,116 +1,70 @@
+// stores/search.ts
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Product } from '../types'
 
 export const useSearchStore = defineStore('search', () => {
   const searchQuery = ref('')
-  const searchResults = ref<Product[]>([])
-  const isSearching = ref(false)
+  const selectedCategory = ref('')           // usamos o slug da categoria
+  const sortBy = ref<'relevance' | 'price_asc' | 'price_desc'>('relevance')
   const recentSearches = ref<string[]>([])
-  const selectedCategory = ref<string>('')
-  const sortBy = ref<'relevance' | 'price_asc' | 'price_desc' | 'rating'>('relevance')
 
-  // Carregar histórico do localStorage
+  // ====================== HISTÓRICO ======================
   const loadRecentSearches = () => {
     const saved = localStorage.getItem('recentSearches')
-    if (saved) {
-      recentSearches.value = JSON.parse(saved)
-    }
+    if (saved) recentSearches.value = JSON.parse(saved)
   }
 
-  // Salvar histórico no localStorage
   const saveRecentSearches = () => {
-    localStorage.setItem('recentSearches', JSON.stringify(recentSearches.value.slice(0, 5)))
+    localStorage.setItem('recentSearches', JSON.stringify(recentSearches.value.slice(0, 8)))
   }
 
-  // Adicionar busca ao histórico
   const addToRecentSearches = (query: string) => {
-    if (!query.trim()) return
-    
-    const index = recentSearches.value.indexOf(query)
-    if (index !== -1) {
-      recentSearches.value.splice(index, 1)
-    }
-    recentSearches.value.unshift(query)
+    if (!query?.trim()) return
+    const q = query.trim()
+    const index = recentSearches.value.indexOf(q)
+    if (index !== -1) recentSearches.value.splice(index, 1)
+    recentSearches.value.unshift(q)
     saveRecentSearches()
   }
 
-  // Limpar histórico
   const clearRecentSearches = () => {
     recentSearches.value = []
     saveRecentSearches()
   }
 
-  // Função de busca
-  const searchProducts = (products: Product[], query: string, category?: string) => {
-    // If no query and no category, return empty array
-    if (!query.trim() && !category) {
-      return []
-    }
-
-    const searchTerm = query.toLowerCase().trim()
-    
-    return products.filter(product => {
-      // Filtro por categoria
-      if (category && product.category !== category) {
-        return false
-      }
-      
-      // Se não há termo de busca, retorna apenas produtos da categoria
-      if (!searchTerm) {
-        return true
-      }
-      
-      // Busca por nome, categoria ou descrição
-      return (
-        product.title.toLowerCase().includes(searchTerm) ||
-        product.category.toLowerCase().includes(searchTerm) ||
-        product.description.toLowerCase().includes(searchTerm)
-      )
-    })
-  }
-
-  // Ordenar resultados
-  const sortResults = (results: Product[]) => {
-    const sorted = [...results]
-    
-    switch (sortBy.value) {
-      case 'price_asc':
-        return sorted.sort((a, b) => a.price - b.price)
-      case 'price_desc':
-        return sorted.sort((a, b) => b.price - a.price)
-      case 'rating':
-        return sorted.sort((a, b) => b.rating.rate - a.rating.rate)
-      default:
-        return sorted
-    }
-  }
-
-  // Computed para resultados filtrados
+  // ====================== FILTRO PRINCIPAL ======================
   const getFilteredResults = (products: Product[]) => {
-    let results = searchProducts(products, searchQuery.value, selectedCategory.value)
-    results = sortResults(results)
-    return results
-  }
+    const term = searchQuery.value.toLowerCase().trim()
+    const catFilter = selectedCategory.value.trim()
 
-  // Resetar busca
-  const resetSearch = () => {
-    searchQuery.value = ''
-    selectedCategory.value = ''
-    sortBy.value = 'relevance'
+    return products.filter((product: Product) => {
+      // Filtro por categoria (category é OBJETO)
+      if (catFilter) {
+        const productSlug = product.category?.slug || ''
+        if (productSlug !== catFilter) return false
+      }
+
+      // Se não tem termo de busca → retorna todos (ou filtrado só por categoria)
+      if (!term) return true
+
+      // Busca segura no título, descrição e nome da categoria
+      const titleMatch = product.title?.toLowerCase().includes(term) || false
+      const descMatch = product.description?.toLowerCase().includes(term) || false
+      const catNameMatch = product.category?.name?.toLowerCase().includes(term) || false
+
+      return titleMatch || descMatch || catNameMatch
+    })
   }
 
   return {
     searchQuery,
-    searchResults,
-    isSearching,
-    recentSearches,
     selectedCategory,
     sortBy,
-    loadRecentSearches,
+    recentSearches,
+    getFilteredResults,
     addToRecentSearches,
     clearRecentSearches,
-    getFilteredResults,
-    resetSearch
+    loadRecentSearches,
   }
 })

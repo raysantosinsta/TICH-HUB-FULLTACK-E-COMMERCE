@@ -1,6 +1,6 @@
 <template>
   <div class="favorites-page-premium">
-    <!-- Background Premium com Efeitos Avançados -->
+    <!-- Background Premium -->
     <div class="bg-premium-advanced">
       <div class="bg-gradient-dynamic"></div>
       <div class="light-sweep-dynamic"></div>
@@ -13,6 +13,7 @@
     </div>
 
     <div class="container-premium">
+      <!-- Header -->
       <div class="page-header-premium">
         <div class="header-content-premium">
           <div class="title-wrapper-premium">
@@ -20,7 +21,6 @@
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
                 <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z" fill="currentColor"/>
               </svg>
-              <div class="icon-glow"></div>
             </div>
             <h1 class="page-title-premium">Meus <span class="gold-text">Favoritos</span></h1>
           </div>
@@ -31,17 +31,16 @@
         </div>
       </div>
 
-      <!-- Loading State Premium -->
+      <!-- Loading -->
       <div v-if="loading" class="loading-state-premium">
         <div class="loading-heart">
           <div class="heart-loader"></div>
           <div class="heart-loader heart-loader-2"></div>
-          <div class="heart-loader heart-loader-3"></div>
         </div>
         <p class="loading-text-premium">Carregando seus favoritos...</p>
       </div>
 
-      <!-- Lista de Favoritos Premium -->
+      <!-- Lista de Favoritos -->
       <div v-else-if="isAuthenticated && favorites.length > 0" class="favorites-list-premium">
         <transition-group name="favorite-list" tag="div" class="favorites-grid-premium">
           <FavoriteItem 
@@ -62,51 +61,35 @@
         </div>
       </div>
 
-      <!-- Estado Vazio Premium -->
+      <!-- Vazio -->
       <div v-else-if="isAuthenticated && favorites.length === 0 && !loading" class="empty-favorites-premium">
         <div class="empty-content-premium">
           <div class="empty-animation">
-            <svg class="empty-icon-premium" width="120" height="120" viewBox="0 0 24 24" fill="none">
-              <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none">
+              <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z" fill="none" stroke="#ff6b6b" stroke-width="1.5"/>
             </svg>
-            <div class="floating-hearts">
-              <span>❤️</span>
-              <span>❤️</span>
-              <span>❤️</span>
-            </div>
           </div>
           <h2 class="empty-title">Sua lista de favoritos está vazia</h2>
-          <p class="empty-description">Comece adicionando produtos que você ama. Eles aparecerão aqui para você!</p>
+          <p class="empty-description">Comece adicionando produtos que você ama!</p>
           <router-link to="/products" class="explore-btn-premium">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
             Explorar produtos
           </router-link>
         </div>
       </div>
 
-      <!-- Estado Não Autenticado Premium -->
+      <!-- Não logado -->
       <div v-else-if="!isAuthenticated" class="login-prompt-premium">
         <div class="login-prompt-card-premium">
           <div class="login-prompt-icon">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none">
-              <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
+              <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="#D4AF37"/>
             </svg>
-            <div class="icon-pulse"></div>
           </div>
-          <h2 class="login-prompt-title">Acesso Exclusivo para Membros</h2>
-          <p class="login-prompt-description">Faça login para ver e gerenciar seus produtos favoritos</p>
+          <h2 class="login-prompt-title">Faça login para ver seus favoritos</h2>
+          <p class="login-prompt-description">Salve os produtos que você mais gosta e acesse facilmente.</p>
           <div class="login-buttons-premium">
-            <router-link to="/login" class="btn-primary-premium">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15M10 17L15 12M15 12L10 7M15 12H3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              Entrar na conta
-            </router-link>
-            <router-link to="/register" class="btn-outline-premium">
-              Criar nova conta
-            </router-link>
+            <router-link to="/login" class="btn-primary-premium">Entrar</router-link>
+            <router-link to="/register" class="btn-outline-premium">Criar conta</router-link>
           </div>
         </div>
       </div>
@@ -129,64 +112,55 @@ const authStore = useAuthStore()
 const toast = useToast()
 const { confirm } = useConfirm()
 
-// Computed properties
+// Computed
 const favorites = computed(() => favoritesStore.favorites)
 const totalFavorites = computed(() => favoritesStore.totalFavorites)
-const loading = computed(() => favoritesStore.loading)
+const loading = computed(() => favoritesStore.loading || false)
 const isAuthenticated = computed(() => authStore.isAuthenticated)
-const currentUser = computed(() => authStore.user)
 
-// Partículas de coração
-const getParticleStyle = (index: number) => {
-  return {
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    animationDelay: `${Math.random() * 15}s`,
-    animationDuration: `${10 + Math.random() * 15}s`,
-    opacity: 0.1 + Math.random() * 0.3
-  }
-}
+// Partículas
+const getParticleStyle = (index: number) => ({
+  left: `${Math.random() * 100}%`,
+  top: `${Math.random() * 100}%`,
+  animationDelay: `${Math.random() * 15}s`,
+  animationDuration: `${12 + Math.random() * 18}s`
+})
 
-// Observar mudanças na autenticação
-watch(() => authStore.isAuthenticated, (newValue) => {
-  if (newValue) {
-    favoritesStore.syncWithUser()
-  } else {
+// Sincronizar favoritos quando usuário logar/deslogar
+watch(() => authStore.isAuthenticated, (isAuth) => {
+  if (isAuth) {
     favoritesStore.syncWithUser()
   }
 })
 
-// Observar mudanças no ID do usuário
 watch(() => authStore.user?.id, () => {
   if (authStore.isAuthenticated) {
     favoritesStore.syncWithUser()
   }
 })
 
-// Remover um favorito específico
 const handleRemoveFavorite = (productId: number) => {
-  toast.info('Favorito removido', 'Produto removido dos seus favoritos.', 2000)
+  toast.info('Removido', 'Produto removido dos favoritos', 2000)
 }
 
-// Limpar todos os favoritos
 const clearAllFavorites = async () => {
   if (!isAuthenticated.value) {
-    toast.warning('Acesso negado', 'Faça login para gerenciar seus favoritos.', 3000)
+    toast.warning('Ação não permitida', 'Faça login para gerenciar favoritos')
     router.push('/login')
     return
   }
-  
-  const result = await confirm({
-    title: 'Limpar favoritos',
-    message: 'Tem certeza que deseja remover todos os produtos dos favoritos? Esta ação não pode ser desfeita.',
-    confirmText: 'Sim, limpar tudo',
+
+  const confirmed = await confirm({
+    title: 'Limpar todos os favoritos?',
+    message: 'Esta ação não pode ser desfeita.',
+    confirmText: 'Sim, limpar',
     cancelText: 'Cancelar',
     type: 'danger'
   })
-  
-  if (result) {
+
+  if (confirmed) {
     favoritesStore.clearFavorites()
-    toast.success('Favoritos limpos', 'Todos os produtos foram removidos dos seus favoritos.', 3000)
+    toast.success('Favoritos limpos', 'Todos os produtos foram removidos.')
   }
 }
 
@@ -196,6 +170,8 @@ onMounted(() => {
   }
 })
 </script>
+
+
 
 <style scoped>
 /* ========== FAVORITES PAGE PREMIUM ========== */
@@ -926,5 +902,47 @@ onMounted(() => {
   .login-prompt-description {
     font-size: 0.85rem;
   }
+  
+}
+
+.favorites-page-premium {
+  position: relative;
+  min-height: 100vh;
+  padding: 60px 0 100px;
+}
+
+.bg-premium-advanced {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: -1;
+  background: #0b0b0f;
+  overflow: hidden;
+}
+
+.bg-gradient-dynamic {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 30% 20%, rgba(212,175,55,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(255,107,107,0.06) 0%, transparent 50%),
+              linear-gradient(135deg, #0b0b0f 0%, #13131a 100%);
+}
+
+.heart-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.heart-particle {
+  position: absolute;
+  font-size: 14px;
+  animation: floatHeart linear infinite;
+  opacity: 0.15;
+}
+
+@keyframes floatHeart {
+  from { transform: translateY(100vh) rotate(0deg); }
+  to   { transform: translateY(-100vh) rotate(360deg); }
 }
 </style>

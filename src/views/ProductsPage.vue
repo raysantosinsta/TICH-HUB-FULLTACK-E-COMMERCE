@@ -31,30 +31,32 @@
             <span class="count-text">{{ filteredProducts.length === 1 ? 'produto encontrado' : 'produtos encontrados' }}</span>
           </div>
         </div>
-        
+       
         <!-- Filtros e Ordenação Premium -->
-        <div class="filters-bar-premium">
+        <div class="filters-bar-premium" v-if="validCategories.length > 0">
           <div class="category-filters-premium">
-            <button 
+            <button
               @click="clearCategoryFilter"
               class="filter-chip-premium"
-              :class="{ active: !selectedCategory }"
+              :class="{ active: !selectedCategoryFromUrl }"
             >
               <span class="chip-glow"></span>
               <span class="chip-content">Todos</span>
             </button>
-            <button 
-              v-for="cat in categories" 
-              :key="cat"
-              @click="setCategoryFilter(cat)"
+            
+            <!-- Botões de categorias (sem Category 1786) -->
+            <button
+              v-for="cat in validCategories"
+              :key="cat.id"
+              @click="setCategoryFilter(cat.name)"
               class="filter-chip-premium"
-              :class="{ active: selectedCategory === cat }"
+              :class="{ active: selectedCategoryFromUrl === cat.name }"
             >
               <span class="chip-glow"></span>
-              <span class="chip-content">{{ formatCategoryName(cat) }}</span>
+              <span class="chip-content">{{ formatCategoryName(cat.name) }}</span>
             </button>
           </div>
-          
+         
           <div class="sort-filters-premium">
             <div class="sort-wrapper">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -64,7 +66,7 @@
                 <option value="relevance">Mais relevantes</option>
                 <option value="price_asc">Menor preço</option>
                 <option value="price_desc">Maior preço</option>
-                <option value="rating">Melhor avaliação</option>
+                <option value="latest">Mais recentes</option>
               </select>
             </div>
           </div>
@@ -87,8 +89,8 @@
       <!-- Products Grid Premium -->
       <div v-else-if="filteredProducts.length > 0" class="products-grid-premium">
         <transition-group name="product-grid" tag="div" class="products-grid-inner">
-          <ProductCard 
-            v-for="product in paginatedProducts" 
+          <ProductCard
+            v-for="product in paginatedProducts"
             :key="product.id"
             :product="product"
             @view="goToProduct"
@@ -123,19 +125,15 @@
 
       <!-- Paginação Premium -->
       <div v-if="filteredProducts.length > 0 && totalPages > 1" class="pagination-premium">
-        <button 
-          class="page-btn-premium"
-          :disabled="currentPage === 1"
-          @click="currentPage--"
-        >
+        <button class="page-btn-premium" :disabled="currentPage === 1" @click="currentPage--">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
-        
+       
         <div class="page-numbers-premium">
-          <button 
-            v-for="page in visiblePages" 
+          <button
+            v-for="page in visiblePages"
             :key="page"
             class="page-number-premium"
             :class="{ active: currentPage === page, dots: page === '...' }"
@@ -145,12 +143,8 @@
             {{ page }}
           </button>
         </div>
-        
-        <button 
-          class="page-btn-premium"
-          :disabled="currentPage === totalPages"
-          @click="currentPage++"
-        >
+       
+        <button class="page-btn-premium" :disabled="currentPage === totalPages" @click="currentPage++">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
             <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
@@ -173,7 +167,7 @@ const store = useProductsStore()
 
 // Estado
 const loading = ref(true)
-const sortBy = ref<'relevance' | 'price_asc' | 'price_desc' | 'rating'>('relevance')
+const sortBy = ref<'relevance' | 'price_asc' | 'price_desc' | 'latest'>('relevance')
 const currentPage = ref(1)
 const itemsPerPage = 12
 
@@ -188,34 +182,84 @@ const getParticleStyle = (index: number) => {
   }
 }
 
+// Função para obter o nome da categoria do produto
+const getCategoryName = (product: any): string => {
+  if (!product.category) return ""
+  if (typeof product.category === 'object' && product.category.name) {
+    return product.category.name
+  }
+  if (typeof product.category === 'string') {
+    return product.category
+  }
+  return ""
+}
+
 // Obter categoria da URL
-const selectedCategory = computed(() => {
+const selectedCategoryFromUrl = computed(() => {
   return route.query.category as string || ''
 })
 
-// Categorias disponíveis
-const categories = computed(() => store.categories)
+// Categorias VÁLIDAS - Versão limpa (remove "string", "Category 1786" e categorias inválidas)
+const validCategories = computed(() => {
+  if (!store.products || store.products.length === 0) {
+    return []
+  }
+
+  const categoryMap = new Map<number, { id: number; name: string; count: number }>()
+
+  store.products.forEach(product => {
+    const cat = product.category
+
+    // Proteção contra valores inválidos
+    if (!cat) return
+    if (typeof cat === 'string') {
+      if (cat.trim() === '' || cat.toLowerCase() === 'string') return
+      // Se for string simples, usamos como nome (mas isso raramente acontece)
+    } else if (typeof cat === 'object' && cat?.name) {
+      const name = cat.name?.trim()
+      if (!name || name.toLowerCase() === 'string' || name === 'Category 1786') return
+
+      const id = cat.id || 0
+      const existing = categoryMap.get(id)
+      if (existing) {
+        existing.count++
+      } else {
+        categoryMap.set(id, { id, name, count: 1 })
+      }
+    }
+  })
+
+  return Array.from(categoryMap.values())
+    .filter(cat => cat.count > 0)
+    .sort((a, b) => a.name.localeCompare(b.name))
+})
 
 // Produtos filtrados
 const filteredProducts = computed(() => {
-  let products = store.products
+  let products = [...store.products]
 
   // Filtrar por categoria
-  if (selectedCategory.value) {
-    products = products.filter(p => p.category === selectedCategory.value)
+  if (selectedCategoryFromUrl.value) {
+    products = products.filter(p => {
+      const categoryName = getCategoryName(p)
+      return categoryName === selectedCategoryFromUrl.value
+    })
   }
 
   // Ordenar
-  const sorted = [...products]
   switch (sortBy.value) {
     case 'price_asc':
-      return sorted.sort((a, b) => a.price - b.price)
+      return products.sort((a, b) => a.price - b.price)
     case 'price_desc':
-      return sorted.sort((a, b) => b.price - a.price)
-    case 'rating':
-      return sorted.sort((a, b) => b.rating.rate - a.rating.rate)
+      return products.sort((a, b) => b.price - a.price)
+    case 'latest':
+      return products.sort((a, b) => {
+        const dateA = a.creationAt ? new Date(a.creationAt).getTime() : 0
+        const dateB = b.creationAt ? new Date(b.creationAt).getTime() : 0
+        return dateB - dateA
+      })
     default:
-      return sorted
+      return products
   }
 })
 
@@ -258,25 +302,35 @@ const visiblePages = computed(() => {
 
 // Título da página
 const pageTitle = computed(() => {
-  if (!selectedCategory.value) return 'Todos os Produtos'
-  const categoryName = formatCategoryName(selectedCategory.value)
+  if (!selectedCategoryFromUrl.value) return 'Todos os Produtos'
+  const categoryName = formatCategoryName(selectedCategoryFromUrl.value)
   return categoryName
 })
 
 // Formatar nome da categoria
-const formatCategoryName = (category: string) => {
+const formatCategoryName = (categoryName: string) => {
   const names: Record<string, string> = {
     "men's clothing": "Moda Masculina",
     "women's clothing": "Moda Feminina",
     "jewelery": "Jóias Exclusivas",
-    "electronics": "Tecnologia Premium"
+    "electronics": "Tecnologia Premium",
+    "furniture": "Móveis",
+    "shoes": "Calçados",
+    "miscellaneous": "Diversos",
+    "clothes": "Roupas"
   }
-  return names[category] || category
+  return names[categoryName?.toLowerCase()] || categoryName || "Produtos"
 }
 
 // Ações
 const setCategoryFilter = (category: string) => {
-  router.push({ query: { category } })
+  // Verificar se a categoria existe nos produtos
+  const categoryExists = validCategories.value.some(cat => cat.name === category)
+  if (!categoryExists) {
+    console.warn(`Categoria "${category}" não existe nos produtos`)
+    return
+  }
+  router.push({ query: { category: encodeURIComponent(category) } })
   currentPage.value = 1
 }
 
@@ -311,9 +365,27 @@ onMounted(async () => {
   if (store.products.length === 0) {
     await store.fetchProducts()
   }
+  
+  console.log('Produtos carregados:', store.products.length)
+  console.log('Categorias com produtos:', validCategories.value.map(c => c.name))
+  
+  // Verificar se a categoria da URL existe
+  const categoryParam = route.query.category as string
+  if (categoryParam) {
+    const decodedCategory = decodeURIComponent(categoryParam)
+    const categoryExists = validCategories.value.some(cat => cat.name === decodedCategory)
+    
+    if (!categoryExists) {
+      console.warn(`Categoria "${decodedCategory}" não encontrada. Limpando URL.`)
+      router.replace({ path: route.path, query: {} })
+    }
+  }
+  
   loading.value = false
 })
 </script>
+
+
 
 <style scoped>
 /* ========== PRODUCTS PAGE PREMIUM ========== */

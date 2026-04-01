@@ -1,32 +1,42 @@
 <template>
   <div class="product-list-premium">
-    <!-- Filtros Premium -->
-    <div class="filters-premium">
+    <!-- Filtros Premium - Só mostra se houver categorias COM PRODUTOS -->
+    <div class="filters-premium" v-if="validCategories.length > 0 && !loading">
       <div class="filters-header">
         <div class="filters-title">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <path d="M3 6H21M6 12H18M10 18H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path
+              d="M3 6H21M6 12H18M10 18H14"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
           </svg>
           <span>Categorias</span>
         </div>
         <div class="filters-buttons">
-          <button 
-            v-for="cat in categories" 
-            :key="cat"
-            @click="filterByCategory(cat)"
-            :class="{ active: selectedCategory === cat }"
+          <button
+            v-for="cat in validCategories"
+            :key="cat.name"
+            @click="filterByCategory(cat.name)"
+            :class="{ active: selectedCategory === cat.name }"
             class="filter-btn-premium"
           >
             <span class="btn-glow"></span>
-            <span class="btn-content">{{ formatCategoryName(cat) }}</span>
+            <span class="btn-content">{{ formatCategoryName(cat.name) }}</span>
           </button>
-          <button 
+          <button
             @click="clearFilter"
             class="filter-btn-premium clear-btn"
             v-if="selectedCategory"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path
+                d="M18 6L6 18M6 6L18 18"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
             Limpar
           </button>
@@ -34,7 +44,7 @@
       </div>
     </div>
 
-    <!-- Loading Premium -->
+    <!-- Loading State -->
     <div v-if="loading" class="loading-premium">
       <div class="spinner-premium">
         <div class="spinner-ring"></div>
@@ -44,25 +54,15 @@
       <p class="loading-text">Carregando produtos exclusivos...</p>
     </div>
 
-    <!-- Error Premium -->
-    <div v-else-if="error" class="error-premium">
-      <div class="error-icon">⚠️</div>
-      <h3>Ops! Algo deu errado</h3>
-      <p>{{ error }}</p>
-      <button @click="retry" class="retry-btn-premium">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M20 12C20 16.4 16.4 20 12 20C7.6 20 4 16.4 4 12C4 7.6 7.6 4 12 4C14.4 4 16.5 5.1 18 6.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          <path d="M15 9H20V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-        </svg>
-        Tentar Novamente
-      </button>
-    </div>
-
-    <!-- Listagem de Produtos Premium -->
-    <div v-else class="products-grid-premium">
-      <transition-group name="product-premium" tag="div" class="products-grid-inner">
-        <ProductCard 
-          v-for="product in products" 
+    <!-- Products Grid -->
+    <div v-else-if="displayProducts.length > 0" class="products-grid-premium">
+      <transition-group
+        name="product-premium"
+        tag="div"
+        class="products-grid-inner"
+      >
+        <ProductCard
+          v-for="product in displayProducts"
           :key="product.id"
           :product="product"
           @view="goToProduct"
@@ -70,12 +70,24 @@
       </transition-group>
     </div>
 
-    <!-- Mensagem quando não há produtos -->
-    <div v-if="!loading && products.length === 0" class="empty-premium">
+    <!-- Empty State -->
+    <div
+      v-else-if="!loading && displayProducts.length === 0"
+      class="empty-premium"
+    >
       <div class="empty-icon">🔍</div>
       <h3>Nenhum produto encontrado</h3>
-      <p>Não encontramos produtos nesta categoria. Tente outro filtro.</p>
-      <button @click="clearFilter" class="empty-btn-premium">
+      <p v-if="selectedCategory">
+        Não encontramos produtos na categoria "{{
+          formatCategoryName(selectedCategory)
+        }}".
+      </p>
+      <p v-else>Não encontramos produtos no momento.</p>
+      <button
+        v-if="selectedCategory"
+        @click="clearFilter"
+        class="empty-btn-premium"
+      >
         Ver todos os produtos
       </button>
     </div>
@@ -83,60 +95,175 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useProductsStore } from '../stores/products'
-import { useToast } from '../plugins/toast'
-import ProductCard from './ProductCard.vue'
-import type { Product } from '../types'
+import { computed, onMounted, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useProductsStore } from "../stores/products";
+import { useToast } from "../plugins/toast";
+import ProductCard from "./ProductCard.vue";
+import type { Product } from "../types";
 
-const router = useRouter()
-const store = useProductsStore()
-const toast = useToast()
+const route = useRoute();
+const router = useRouter();
+const store = useProductsStore();
+const toast = useToast();
 
-const products = computed(() => store.products)
-const loading = computed(() => store.loading)
-const error = computed(() => store.error)
-const categories = computed(() => store.categories)
-const selectedCategory = computed(() => store.selectedCategory)
+const selectedCategory = ref<string>("");
+const loading = computed(() => store.loading);
 
-const formatCategoryName = (category: string) => {
-  const names: Record<string, string> = {
-    "men's clothing": "Masculino",
-    "women's clothing": "Feminino",
-    "jewelery": "Jóias",
-    "electronics": "Eletrônicos"
+// Função para obter o nome da categoria do produto (trata objeto e string)
+const getCategoryName = (product: any): string => {
+  if (!product.category) return "";
+  // Se for objeto (API Platzi)
+  if (typeof product.category === "object" && product.category.name) {
+    return product.category.name;
   }
-  return names[category] || category
-}
+  // Se for string
+  if (typeof product.category === "string") {
+    return product.category;
+  }
+  return "";
+};
 
-const filterByCategory = async (category: string) => {
-  await store.fetchProductsByCategory(category)
+// Lista de categorias VÁLIDAS (apenas as que realmente têm produtos)
+const validCategories = computed(() => {
+  if (!store.products || store.products.length === 0) {
+    return [];
+  }
+
+  // Usar um Map para categorias únicas
+  const categoryMap = new Map<string, { name: string; count: number }>();
+
+  store.products.forEach((product) => {
+    const categoryName = getCategoryName(product);
+    if (categoryName) {
+      const existing = categoryMap.get(categoryName);
+      if (existing) {
+        existing.count++;
+      } else {
+        categoryMap.set(categoryName, { name: categoryName, count: 1 });
+      }
+    }
+  });
+
+  // Converter para array e ordenar
+  const categories = Array.from(categoryMap.values())
+    .filter((cat) => cat.count > 0) // Garantir que tem produtos
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  console.log(
+    "Categorias válidas:",
+    categories.map((c) => c.name),
+  );
+  return categories;
+});
+
+// Produtos filtrados (para exibição)
+const displayProducts = computed(() => {
+  if (!store.products || store.products.length === 0) {
+    return [];
+  }
+
+  let products = [...store.products];
+
+  if (selectedCategory.value) {
+    products = products.filter((p) => {
+      const categoryName = getCategoryName(p);
+      return categoryName === selectedCategory.value;
+    });
+  }
+
+  return products;
+});
+
+const formatCategoryName = (categoryName: string) => {
+  const names: Record<string, string> = {
+    "men's clothing": "Moda Masculina",
+    "women's clothing": "Moda Feminina",
+    jewelery: "Jóias",
+    electronics: "Eletrônicos",
+    furniture: "Móveis",
+    shoes: "Calçados",
+    miscellaneous: "Diversos",
+    clothes: "Roupas",
+  };
+  return names[categoryName?.toLowerCase()] || categoryName;
+};
+
+const filterByCategory = (category: string) => {
+  selectedCategory.value = category;
+  router.replace({
+    path: route.path,
+    query: { category: encodeURIComponent(category) },
+  });
   toast.info(
-    'Filtro aplicado', 
+    "Filtro aplicado",
     `Mostrando produtos de ${formatCategoryName(category)}`,
-    2000
-  )
-}
+    2000,
+  );
+};
 
-const clearFilter = async () => {
-  await store.fetchProducts()
-  toast.info('Filtro removido', 'Mostrando todos os produtos', 2000)
-}
-
-const retry = () => {
-  store.fetchProducts()
-  toast.info('Recarregando', 'Tentando carregar os produtos novamente...', 2000)
-}
+const clearFilter = () => {
+  selectedCategory.value = "";
+  router.replace({ path: route.path, query: {} });
+  toast.info("Filtro removido", "Mostrando todos os produtos", 2000);
+};
 
 const goToProduct = (product: Product) => {
-  router.push(`/product/${product.id}`)
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
+  router.push(`/product/${product.id}`);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
-onMounted(() => {
-  store.fetchProducts()
-})
+// Ler categoria da URL
+onMounted(async () => {
+  if (store.products.length === 0) {
+    await store.fetchProducts();
+  }
+
+  console.log("Produtos carregados:", store.products.length);
+  console.log(
+    "Categorias válidas:",
+    validCategories.value.map((c) => c.name),
+  );
+
+  const categoryParam = route.query.category as string;
+  if (categoryParam) {
+    const decodedCategory = decodeURIComponent(categoryParam);
+    const categoryExists = validCategories.value.some(
+      (cat) => cat.name === decodedCategory,
+    );
+
+    if (categoryExists) {
+      selectedCategory.value = decodedCategory;
+      console.log("Filtro aplicado por URL:", decodedCategory);
+    } else {
+      console.warn(
+        `Categoria "${decodedCategory}" não encontrada. Limpando URL.`,
+      );
+      router.replace({ path: route.path, query: {} });
+    }
+  }
+});
+
+// Observar mudanças na URL
+watch(
+  () => route.query.category,
+  (newCategory) => {
+    if (newCategory) {
+      const decodedCategory = decodeURIComponent(newCategory as string);
+      const categoryExists = validCategories.value.some(
+        (cat) => cat.name === decodedCategory,
+      );
+
+      if (categoryExists && decodedCategory !== selectedCategory.value) {
+        selectedCategory.value = decodedCategory;
+      } else if (!categoryExists) {
+        router.replace({ path: route.path, query: {} });
+      }
+    } else if (selectedCategory.value) {
+      selectedCategory.value = "";
+    }
+  },
+);
 </script>
 
 <style scoped>
@@ -189,7 +316,8 @@ onMounted(() => {
 }
 
 @keyframes pulseTitle {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.6;
   }
   50% {
@@ -224,7 +352,12 @@ onMounted(() => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.3), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.3),
+    transparent
+  );
   transition: left 0.5s ease;
 }
 
@@ -317,73 +450,13 @@ onMounted(() => {
 }
 
 @keyframes pulseText {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.5;
   }
   50% {
     opacity: 1;
   }
-}
-
-/* Error Premium */
-.error-premium {
-  text-align: center;
-  padding: 80px 20px;
-  background: rgba(255, 107, 107, 0.05);
-  border-radius: 40px;
-  border: 1px solid rgba(255, 107, 107, 0.2);
-  max-width: 500px;
-  margin: 0 auto;
-}
-
-.error-icon {
-  font-size: 3rem;
-  margin-bottom: 20px;
-  animation: shakeError 0.5s ease;
-}
-
-@keyframes shakeError {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-5px);
-  }
-  75% {
-    transform: translateX(5px);
-  }
-}
-
-.error-premium h3 {
-  color: var(--white-soft);
-  margin-bottom: 12px;
-  font-size: 1.3rem;
-}
-
-.error-premium p {
-  color: rgba(245, 240, 230, 0.7);
-  margin-bottom: 24px;
-}
-
-.retry-btn-premium {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 28px;
-  background: linear-gradient(135deg, var(--gold-primary) 0%, #b58f2a 100%);
-  color: var(--black-primary);
-  border: none;
-  border-radius: 50px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  font-size: 0.9rem;
-}
-
-.retry-btn-premium:hover {
-  transform: translateY(-2px);
-  gap: 14px;
-  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.4);
 }
 
 /* Products Grid Premium */
@@ -408,7 +481,7 @@ onMounted(() => {
   gap: 32px;
 }
 
-/* Transições para produtos */
+/* Product Grid Transition */
 .product-premium-enter-active,
 .product-premium-leave-active {
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -448,7 +521,8 @@ onMounted(() => {
 }
 
 @keyframes floatEmpty {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -486,35 +560,33 @@ onMounted(() => {
   box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
 }
 
-/* Responsividade Premium */
-@media (max-width: 1200px) {
+/* Responsividade */
+@media (max-width: 1024px) {
   .product-list-premium {
     padding: 32px 24px;
   }
-  
-  .products-grid-inner {
-    gap: 24px;
-  }
-}
 
-@media (max-width: 1024px) {
   .filters-premium {
     border-radius: 40px;
     padding: 8px 16px;
   }
-  
+
   .filters-header {
     flex-direction: column;
     align-items: stretch;
     gap: 16px;
   }
-  
+
   .filters-title {
     justify-content: center;
   }
-  
+
   .filters-buttons {
     justify-content: center;
+  }
+
+  .products-grid-inner {
+    gap: 24px;
   }
 }
 
@@ -522,33 +594,20 @@ onMounted(() => {
   .product-list-premium {
     padding: 24px 16px;
   }
-  
+
   .filters-premium {
     border-radius: 32px;
     padding: 12px 16px;
   }
-  
-  .filters-buttons {
-    gap: 8px;
-  }
-  
+
   .filter-btn-premium {
     padding: 8px 20px;
     font-size: 0.8rem;
   }
-  
+
   .products-grid-inner {
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 20px;
-  }
-  
-  .loading-premium {
-    padding: 60px 20px;
-  }
-  
-  .spinner-premium {
-    width: 60px;
-    height: 60px;
   }
 }
 
@@ -556,63 +615,14 @@ onMounted(() => {
   .product-list-premium {
     padding: 20px 12px;
   }
-  
-  .filters-premium {
-    border-radius: 24px;
-    padding: 12px;
-  }
-  
+
   .filter-btn-premium {
     padding: 6px 16px;
     font-size: 0.75rem;
   }
-  
-  .clear-btn {
-    padding: 6px 14px;
-  }
-  
+
   .products-grid-inner {
     grid-template-columns: 1fr;
-    gap: 20px;
   }
-  
-  .error-premium,
-  .empty-premium {
-    padding: 60px 20px;
-    margin: 0 16px;
-  }
-  
-  .error-premium h3,
-  .empty-premium h3 {
-    font-size: 1.1rem;
-  }
-  
-  .loading-text {
-    font-size: 0.85rem;
-  }
-}
-
-/* Scrollbar refinada para a lista */
-.products-grid-inner {
-  scrollbar-width: thin;
-  scrollbar-color: var(--gold-primary) rgba(212, 175, 55, 0.2);
-}
-
-.products-grid-inner::-webkit-scrollbar {
-  width: 8px;
-}
-
-.products-grid-inner::-webkit-scrollbar-track {
-  background: rgba(212, 175, 55, 0.1);
-  border-radius: 4px;
-}
-
-.products-grid-inner::-webkit-scrollbar-thumb {
-  background: var(--gold-primary);
-  border-radius: 4px;
-}
-
-.products-grid-inner::-webkit-scrollbar-thumb:hover {
-  background: #e6bc3e;
 }
 </style>

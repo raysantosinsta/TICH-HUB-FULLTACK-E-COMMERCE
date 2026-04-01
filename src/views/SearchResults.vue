@@ -1,21 +1,17 @@
-
-
 <template>
-  <div class="search-results-premium">
-    <!-- Background Premium com Efeitos Avançados -->
+  <div class="search-results-premium" :key="$route.fullPath">
+    <!-- Background Premium -->
     <div class="bg-premium-advanced">
       <div class="bg-gradient-dynamic"></div>
       <div class="light-sweep-dynamic"></div>
       <div class="glass-overlay-advanced"></div>
       <div class="search-particles">
-        <div v-for="i in 50" :key="i" class="search-particle" :style="getParticleStyle(i)">
-          🔍
-        </div>
+        <div v-for="i in 50" :key="i" class="search-particle" :style="getParticleStyle(i)">🔍</div>
       </div>
     </div>
 
     <div class="container-premium">
-      <!-- Header Premium -->
+      <!-- Header -->
       <div class="page-header-premium">
         <div class="header-content-premium">
           <div class="title-wrapper-premium">
@@ -23,11 +19,9 @@
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
                 <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="1.5"/>
               </svg>
-              <div class="icon-glow"></div>
             </div>
             <h1 class="page-title-premium">
-              Resultados para:
-              <span class="search-term-premium">"{{ searchQuery }}"</span>
+              Resultados para: <span class="search-term-premium">"{{ searchQuery || 'Todos os produtos' }}"</span>
             </h1>
           </div>
           <div class="results-count-premium">
@@ -37,95 +31,43 @@
         </div>
       </div>
 
-      <!-- Filtros Premium -->
+      <!-- Filtros -->
       <div class="filters-bar-premium">
         <div class="category-filters-premium">
-          <button 
-            v-for="cat in categories" 
-            :key="cat"
-            @click="filterByCategory(cat)"
-            :class="{ active: selectedCategory === cat }"
-            class="filter-chip-premium"
-          >
-            <span class="chip-glow"></span>
-            <span class="chip-content">{{ formatCategoryName(cat) }}</span>
+          <button v-for="cat in categories" :key="cat.id" @click="filterByCategory(cat)" 
+                  :class="{ active: selectedCategory === cat.slug }" class="filter-chip-premium">
+            {{ cat.name }}
           </button>
-          <button 
-            v-if="selectedCategory"
-            @click="clearCategoryFilter"
-            class="filter-chip-premium clear-chip"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2"/>
-            </svg>
+          <button v-if="selectedCategory" @click="clearCategoryFilter" class="filter-chip-premium clear-chip">
             Limpar filtro
           </button>
         </div>
 
         <div class="sort-filters-premium">
-          <div class="sort-wrapper">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M3 6H21M6 12H18M10 18H14" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-            <select v-model="sortBy" class="sort-select-premium">
-              <option value="relevance">Mais relevantes</option>
-              <option value="price_asc">Menor preço</option>
-              <option value="price_desc">Maior preço</option>
-              <option value="rating">Melhor avaliação</option>
-            </select>
-          </div>
+          <select v-model="sortBy" class="sort-select-premium">
+            <option value="relevance">Mais relevantes</option>
+            <option value="price_asc">Menor preço</option>
+            <option value="price_desc">Maior preço</option>
+          </select>
         </div>
       </div>
 
-      <!-- Loading Premium -->
-      <div v-if="loading" class="loading-premium">
-        <div class="search-loader">
-          <div class="magnifying-glass">
-            <div class="glass-circle"></div>
-            <div class="glass-handle"></div>
-          </div>
-          <div class="loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        </div>
-        <p class="loading-text-premium">Buscando produtos...</p>
-      </div>
+      <!-- Loading -->
+      <div v-if="loading" class="loading-premium">Buscando produtos...</div>
 
-      <!-- Resultados Grid Premium -->
+      <!-- Resultados -->
       <div v-else-if="results.length > 0" class="results-grid-premium">
         <transition-group name="result-card" tag="div" class="results-grid-inner">
-          <ProductCard 
-            v-for="product in results" 
-            :key="product.id"
-            :product="product"
-            @view="goToProduct"
-          />
+          <ProductCard v-for="product in results" :key="product.id" :product="product" @view="goToProduct"/>
         </transition-group>
       </div>
 
-      <!-- Sem Resultados Premium -->
+      <!-- Sem resultados -->
       <div v-else class="no-results-premium">
         <div class="no-results-card-premium">
-          <div class="no-results-animation">
-            <svg width="100" height="100" viewBox="0 0 24 24" fill="none">
-              <path d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-            <div class="floating-search">
-              <span>🔍</span>
-              <span>✨</span>
-              <span>🔎</span>
-            </div>
-          </div>
-          <h2 class="no-results-title">Nenhum produto encontrado</h2>
-          <p class="no-results-description">Não encontramos produtos para "{{ searchQuery }}". Tente usar palavras diferentes ou verifique a ortografia.</p>
-          <router-link to="/" class="back-home-premium">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12L12 5M5 12L12 19" stroke="currentColor" stroke-width="2"/>
-            </svg>
-            Ver todos os produtos
-          </router-link>
+          <h2>Nenhum produto encontrado</h2>
+          <p>Não encontramos resultados para "{{ searchQuery }}".</p>
+          <router-link to="/" class="back-home-premium">Ver todos os produtos</router-link>
         </div>
       </div>
     </div>
@@ -133,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductsStore } from '../stores/products'
 import { useSearchStore } from '../stores/search'
@@ -145,155 +87,77 @@ const router = useRouter()
 const productsStore = useProductsStore()
 const searchStore = useSearchStore()
 
-const loading = ref(true)
+const loading = ref(false)
 const searchQuery = ref('')
 const selectedCategory = ref('')
-const sortBy = ref<'relevance' | 'price_asc' | 'price_desc' | 'rating'>('relevance')
+const sortBy = ref<'relevance' | 'price_asc' | 'price_desc'>('relevance')
 
-// Função para carregar os dados da busca
 const loadSearchResults = async () => {
   loading.value = true
-  
-  // Pegar os valores diretamente da URL
-  const query = (route.query.q as string) || ''
-  const category = (route.query.category as string) || ''
-  
-  console.log('🔍 Loading search results:', { query, category })
-  
-  searchQuery.value = query
-  selectedCategory.value = category
-  
-  // Atualizar o store
-  searchStore.searchQuery = query
-  searchStore.selectedCategory = category
-  
-  // Adicionar ao histórico se houver query
-  if (query) {
-    searchStore.addToRecentSearches(query)
+
+  const q = String(route.query.q || '').trim()
+  const cat = String(route.query.category || '').trim()
+
+  searchQuery.value = q
+  selectedCategory.value = cat
+  searchStore.searchQuery = q
+  searchStore.selectedCategory = cat
+
+  if (q) searchStore.addToRecentSearches(q)
+
+  if (productsStore.products.length === 0) {
+    await productsStore.fetchProducts()
   }
-  
-  // Pequeno delay para garantir que o store foi atualizado
-  await new Promise(resolve => setTimeout(resolve, 50))
-  
-  console.log('✅ Results loaded:', results.value.length)
+
+  await nextTick()
   loading.value = false
 }
 
-// Watch para mudanças na query da URL
-watch(
-  () => route.query.q,
-  async (newQuery, oldQuery) => {
-    console.log('📝 Query changed:', { newQuery, oldQuery })
-    if (newQuery !== oldQuery) {
-      await loadSearchResults()
-    }
-  }
-)
+watch([() => route.query.q, () => route.query.category], async () => {
+  await loadSearchResults()
+}, { immediate: true })
 
-// Watch para mudanças na categoria da URL
-watch(
-  () => route.query.category,
-  async (newCategory, oldCategory) => {
-    console.log('🏷️ Category changed:', { newCategory, oldCategory })
-    if (newCategory !== oldCategory) {
-      await loadSearchResults()
-    }
-  }
-)
-
-// Watch para mudanças no sortBy
-watch(sortBy, (newVal) => {
-  searchStore.sortBy = newVal
-})
-
-const getParticleStyle = (index: number) => {
-  return {
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    animationDelay: `${Math.random() * 15}s`,
-    animationDuration: `${10 + Math.random() * 15}s`,
-    opacity: 0.1 + Math.random() * 0.3
-  }
-}
+watch(sortBy, (newVal) => { searchStore.sortBy = newVal })
 
 const categories = computed(() => productsStore.categories)
 
 const results = computed(() => {
-  // Obter resultados filtrados do store
-  let results = searchStore.getFilteredResults(productsStore.products)
+  let filtered = searchStore.getFilteredResults(productsStore.products)
   
-  // Ordenar
-  const sorted = [...results]
-  switch (sortBy.value) {
-    case 'price_asc':
-      return sorted.sort((a, b) => a.price - b.price)
-    case 'price_desc':
-      return sorted.sort((a, b) => b.price - a.price)
-    case 'rating':
-      return sorted.sort((a, b) => b.rating.rate - a.rating.rate)
-    default:
-      return sorted
-  }
+  if (sortBy.value === 'price_asc') return [...filtered].sort((a, b) => a.price - b.price)
+  if (sortBy.value === 'price_desc') return [...filtered].sort((a, b) => b.price - a.price)
+  return filtered
 })
 
 const totalResults = computed(() => results.value.length)
 
-const formatCategoryName = (category: string) => {
-  const names: Record<string, string> = {
-    "men's clothing": "Masculino",
-    "women's clothing": "Feminino",
-    "jewelery": "Jóias",
-    "electronics": "Eletrônicos"
-  }
-  return names[category] || category
-}
+const filterByCategory = (cat: any) => {
+  selectedCategory.value = cat.slug
+  searchStore.selectedCategory = cat.slug
 
-const filterByCategory = (category: string) => {
-  selectedCategory.value = category
-  searchStore.selectedCategory = category
-  
-  // Atualizar a URL
-  const params: any = {}
-  if (searchQuery.value) {
-    params.q = searchQuery.value
-  }
-  if (category) {
-    params.category = category
-  }
-  
-  router.replace({ query: params })
+  router.replace({
+    query: { 
+      ...(searchQuery.value && { q: searchQuery.value }),
+      category: cat.slug 
+    }
+  })
 }
 
 const clearCategoryFilter = () => {
   selectedCategory.value = ''
   searchStore.selectedCategory = ''
-  
-  // Atualizar a URL
-  const params: any = {}
-  if (searchQuery.value) {
-    params.q = searchQuery.value
-  }
-  
-  router.replace({ query: params })
+  router.replace({ query: searchQuery.value ? { q: searchQuery.value } : {} })
 }
 
-const goToProduct = (product: Product) => {
-  router.push(`/product/${product.id}`)
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
+const goToProduct = (product: Product) => router.push(`/product/${product.id}`)
 
-onMounted(async () => {
-  console.log('🚀 SearchResults mounted')
-  
-  // Carregar produtos se necessário
-  if (productsStore.products.length === 0) {
-    await productsStore.fetchProducts()
-  }
-  
-  // Carregar os resultados da busca
-  await loadSearchResults()
+const getParticleStyle = (i: number) => ({
+  left: `${Math.random() * 100}%`,
+  top: `${Math.random() * 100}%`,
+  animationDelay: `-${Math.random() * 20}s`
 })
 </script>
+
 
 
 

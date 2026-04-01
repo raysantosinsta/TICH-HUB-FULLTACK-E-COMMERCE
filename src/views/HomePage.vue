@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     <!-- Hero Banner com Slideshow de Produtos -->
-     <HeroBanner />
+    <HeroBanner />
     
     <div class="container">
       <!-- Banner Flash Deal (Ofertas Relâmpago) -->

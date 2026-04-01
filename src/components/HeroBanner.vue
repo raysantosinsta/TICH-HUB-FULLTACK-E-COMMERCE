@@ -6,17 +6,27 @@
       <div class="light-sweep-premium"></div>
       <div class="glass-overlay-premium"></div>
       <div class="particle-field">
-        <div v-for="i in 50" :key="i" class="particle" :style="getParticleStyle(i)"></div>
+        <div
+          v-for="i in 50"
+          :key="i"
+          class="particle"
+          :style="getParticleStyle(i)"
+        ></div>
       </div>
       <div class="gold-dust">
-        <div v-for="i in 30" :key="i" class="dust-particle" :style="getDustStyle(i)"></div>
+        <div
+          v-for="i in 30"
+          :key="i"
+          class="dust-particle"
+          :style="getDustStyle(i)"
+        ></div>
       </div>
     </div>
 
     <!-- Slideshow Container -->
     <div class="slideshow-container-premium">
-      <div 
-        v-for="(product, index) in featuredProducts" 
+      <div
+        v-for="(product, index) in featuredProducts"
         :key="product.id"
         class="slide-premium"
         :class="{ active: currentSlide === index }"
@@ -26,27 +36,36 @@
           <div class="slide-text-premium">
             <div class="text-content-premium">
               <div class="badge-wrapper">
-                <span class="slide-badge-premium">{{ formatCategory(product.category) }}</span>
+                <span class="slide-badge-premium">{{
+                  getCategoryName(product)
+                }}</span>
                 <div class="badge-glow"></div>
               </div>
-              <h2 class="slide-title-premium">{{ truncateTitle(product.title) }}</h2>
+              <h2 class="slide-title-premium">
+                {{ truncateTitle(product.title) }}
+              </h2>
               <!-- Descrição removida conforme solicitado -->
               <div class="slide-price-premium">
-                <span class="price-premium">R$ {{ formatPrice(product.price) }}</span>
-                <span class="price-installment-premium">ou 12x de R$ {{ formatPrice(product.price / 12) }}</span>
+                <span class="price-premium">{{
+                  formatPrice(product.price)
+                }}</span>
+                <span class="price-installment-premium"
+                  >ou 12x de {{ formatPrice(product.price / 12) }}</span
+                >
               </div>
-              <div class="slide-rating-premium">
-                <div class="stars-premium">
-                  <span v-for="star in 5" :key="star" class="star" :class="{ filled: star <= Math.floor(product.rating.rate), half: star === Math.ceil(product.rating.rate) && product.rating.rate % 1 >= 0.5 }">
-                    ★
-                  </span>
-                </div>
-                <span class="rating-count-premium">({{ product.rating.count }} avaliações)</span>
-              </div>
-              <button class="slide-button-premium" @click="goToProduct(product.id)">
+              <!-- Rating removido pois não existe na API -->
+              <button
+                class="slide-button-premium"
+                @click="goToProduct(product.id)"
+              >
                 <span>Ver Produto</span>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path
+                    d="M5 12H19M19 12L12 5M19 12L12 19"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -56,7 +75,7 @@
           <div class="slide-image-premium">
             <div class="image-container-premium">
               <div class="image-wrapper">
-                <img :src="product.image" :alt="product.title">
+                <img :src="getProductImage(product)" :alt="product.title" />
                 <div class="image-reflection"></div>
               </div>
               <div class="image-glow-premium"></div>
@@ -66,22 +85,40 @@
         </div>
       </div>
 
-      <!-- Botões de navegação premium - CORRIGIDOS para não cortar no mobile -->
-      <button class="nav-btn-premium prev-premium" @click="prevSlide" aria-label="Slide anterior">
+      <!-- Botões de navegação premium -->
+      <button
+        class="nav-btn-premium prev-premium"
+        @click="prevSlide"
+        aria-label="Slide anterior"
+      >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path
+            d="M15 18L9 12L15 6"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
         </svg>
       </button>
-      <button class="nav-btn-premium next-premium" @click="nextSlide" aria-label="Próximo slide">
+      <button
+        class="nav-btn-premium next-premium"
+        @click="nextSlide"
+        aria-label="Próximo slide"
+      >
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path
+            d="M9 18L15 12L9 6"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
         </svg>
       </button>
 
       <!-- Indicadores premium -->
       <div class="dots-premium">
-        <button 
-          v-for="(product, index) in featuredProducts" 
+        <button
+          v-for="(product, index) in featuredProducts"
           :key="index"
           class="dot-premium"
           :class="{ active: currentSlide === index }"
@@ -103,39 +140,76 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useProductsStore } from '../stores/products'
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { useProductsStore } from "../stores/products";
 
-const router = useRouter()
-const store = useProductsStore()
-const currentSlide = ref(0)
-let intervalId: number | null = null
-let autoPlayTimeout: number | null = null
+const router = useRouter();
+const store = useProductsStore();
+const currentSlide = ref(0);
+let intervalId: number | null = null;
+let autoPlayTimeout: number | null = null;
 
 // Pegar apenas os 4 primeiros produtos
-const featuredProducts = computed(() => store.products.slice(0, 4))
+const featuredProducts = computed(() => store.products.slice(0, 4));
+
+// Função para obter imagem do produto
+const getProductImage = (product: any) => {
+  if (product.images && product.images.length > 0) {
+    return product.images[0];
+  }
+  if (product.image) {
+    return product.image;
+  }
+  return "/placeholder-image.jpg";
+};
+
+// Função para obter nome da categoria
+const getCategoryName = (product: any) => {
+  if (!product.category) return "Produto";
+
+  // Se category for objeto
+  if (typeof product.category === "object" && product.category.name) {
+    return formatCategory(product.category.name);
+  }
+
+  // Se category for string
+  if (typeof product.category === "string") {
+    return formatCategory(product.category);
+  }
+
+  return "Produto";
+};
 
 const formatPrice = (price: number) => {
-  return price.toFixed(2).replace('.', ',')
-}
+  return price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  });
+};
 
 const formatCategory = (category: string) => {
   const categories: Record<string, string> = {
     "men's clothing": "Moda Masculina",
     "women's clothing": "Moda Feminina",
-    "jewelery": "Jóias Exclusivas",
-    "electronics": "Tecnologia"
-  }
-  return categories[category] || category
-}
+    jewelery: "Jóias Exclusivas",
+    electronics: "Tecnologia",
+    furniture: "Móveis",
+    shoes: "Calçados",
+    miscellaneous: "Diversos",
+    clothes: "Roupas",
+  };
+  return categories[category?.toLowerCase()] || category || "Produto";
+};
 
 const truncateTitle = (title: string) => {
+  if (!title) return "";
   if (title.length > 60) {
-    return title.substring(0, 57) + '...'
+    return title.substring(0, 57) + "...";
   }
-  return title
-}
+  return title;
+};
 
 const getParticleStyle = (index: number) => {
   return {
@@ -145,9 +219,9 @@ const getParticleStyle = (index: number) => {
     animationDuration: `${10 + Math.random() * 15}s`,
     width: `${2 + Math.random() * 4}px`,
     height: `${2 + Math.random() * 4}px`,
-    opacity: 0.1 + Math.random() * 0.3
-  }
-}
+    opacity: 0.1 + Math.random() * 0.3,
+  };
+};
 
 const getDustStyle = (index: number) => {
   return {
@@ -156,71 +230,72 @@ const getDustStyle = (index: number) => {
     animationDelay: `${Math.random() * 20}s`,
     animationDuration: `${15 + Math.random() * 20}s`,
     width: `${1 + Math.random() * 2}px`,
-    height: `${1 + Math.random() * 2}px`
-  }
-}
+    height: `${1 + Math.random() * 2}px`,
+  };
+};
 
 const goToProduct = (id: number) => {
-  router.push(`/product/${id}`)
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
+  router.push(`/product/${id}`);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 const nextSlide = () => {
-  if (featuredProducts.value.length === 0) return
-  currentSlide.value = (currentSlide.value + 1) % featuredProducts.value.length
-  resetAutoPlay()
-}
+  if (featuredProducts.value.length === 0) return;
+  currentSlide.value = (currentSlide.value + 1) % featuredProducts.value.length;
+  resetAutoPlay();
+};
 
 const prevSlide = () => {
-  if (featuredProducts.value.length === 0) return
-  currentSlide.value = currentSlide.value === 0 
-    ? featuredProducts.value.length - 1 
-    : currentSlide.value - 1
-  resetAutoPlay()
-}
+  if (featuredProducts.value.length === 0) return;
+  currentSlide.value =
+    currentSlide.value === 0
+      ? featuredProducts.value.length - 1
+      : currentSlide.value - 1;
+  resetAutoPlay();
+};
 
 const goToSlide = (index: number) => {
-  currentSlide.value = index
-  resetAutoPlay()
-}
+  currentSlide.value = index;
+  resetAutoPlay();
+};
 
 const resetAutoPlay = () => {
   if (autoPlayTimeout) {
-    clearTimeout(autoPlayTimeout)
+    clearTimeout(autoPlayTimeout);
   }
   autoPlayTimeout = window.setTimeout(() => {
-    startAutoPlay()
-  }, 10000)
-}
+    startAutoPlay();
+  }, 10000);
+};
 
 // Auto-play do slideshow
 const startAutoPlay = () => {
   if (intervalId) {
-    clearInterval(intervalId)
+    clearInterval(intervalId);
   }
   intervalId = window.setInterval(() => {
-    nextSlide()
-  }, 8000)
-}
+    nextSlide();
+  }, 8000);
+};
 
 const stopAutoPlay = () => {
   if (intervalId) {
-    clearInterval(intervalId)
-    intervalId = null
+    clearInterval(intervalId);
+    intervalId = null;
   }
   if (autoPlayTimeout) {
-    clearTimeout(autoPlayTimeout)
-    autoPlayTimeout = null
+    clearTimeout(autoPlayTimeout);
+    autoPlayTimeout = null;
   }
-}
+};
 
 onMounted(() => {
-  startAutoPlay()
-})
+  startAutoPlay();
+});
 
 onUnmounted(() => {
-  stopAutoPlay()
-})
+  stopAutoPlay();
+});
 </script>
 
 <style scoped>
@@ -250,16 +325,29 @@ onUnmounted(() => {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: 
-    radial-gradient(circle at 20% 40%, rgba(212, 175, 55, 0.12) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 40% 90%, rgba(212, 175, 55, 0.05) 0%, transparent 60%),
-    linear-gradient(135deg, var(--black-primary) 0%, #0F0F14 50%, #1A1A24 100%);
+  background:
+    radial-gradient(
+      circle at 20% 40%,
+      rgba(212, 175, 55, 0.12) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 70%,
+      rgba(212, 175, 55, 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 40% 90%,
+      rgba(212, 175, 55, 0.05) 0%,
+      transparent 60%
+    ),
+    linear-gradient(135deg, var(--black-primary) 0%, #0f0f14 50%, #1a1a24 100%);
   animation: gradientShift 15s ease-in-out infinite;
 }
 
 @keyframes gradientShift {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
   }
   50% {
@@ -334,7 +422,11 @@ onUnmounted(() => {
 
 .particle {
   position: absolute;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.6) 0%, rgba(212, 175, 55, 0) 80%);
+  background: radial-gradient(
+    circle,
+    rgba(212, 175, 55, 0.6) 0%,
+    rgba(212, 175, 55, 0) 80%
+  );
   border-radius: 50%;
   animation: floatParticle linear infinite;
 }
@@ -464,7 +556,11 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(212, 175, 55, 0.2) 0%,
+    transparent 70%
+  );
   border-radius: 40px;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -479,7 +575,7 @@ onUnmounted(() => {
   margin-bottom: 24px;
   line-height: 1.2;
   font-weight: 800;
-  background: linear-gradient(135deg, #F5F0E6 0%, #D4AF37 100%);
+  background: linear-gradient(135deg, #f5f0e6 0%, #d4af37 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -487,13 +583,13 @@ onUnmounted(() => {
 }
 
 .slide-price-premium {
-  margin-bottom: 20px;
+  margin-bottom: 32px;
 }
 
 .price-premium {
   font-size: 2.2rem;
   font-weight: bold;
-  background: linear-gradient(135deg, var(--gold-primary) 0%, #F5E6A0 100%);
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #f5e6a0 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -504,41 +600,6 @@ onUnmounted(() => {
 .price-installment-premium {
   font-size: 0.9rem;
   color: rgba(245, 240, 230, 0.7);
-}
-
-.slide-rating-premium {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 32px;
-  flex-wrap: wrap;
-}
-
-.stars-premium {
-  display: flex;
-  gap: 3px;
-}
-
-.star {
-  color: rgba(245, 240, 230, 0.3);
-  font-size: 1.1rem;
-}
-
-.star.filled {
-  color: var(--gold-primary);
-}
-
-.star.half {
-  color: var(--gold-primary);
-  position: relative;
-  overflow: hidden;
-  display: inline-block;
-  width: 1.1rem;
-}
-
-.rating-count-premium {
-  font-size: 0.85rem;
-  color: rgba(245, 240, 230, 0.6);
 }
 
 .slide-button-premium {
@@ -557,18 +618,22 @@ onUnmounted(() => {
   box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
   position: relative;
   overflow: hidden;
-  /* Touch target minimum 44px */
   min-height: 48px;
 }
 
 .slide-button-premium::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
   transition: left 0.5s ease;
 }
 
@@ -606,7 +671,11 @@ onUnmounted(() => {
 
 .image-wrapper {
   position: relative;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.1) 0%, rgba(212, 175, 55, 0.05) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(212, 175, 55, 0.1) 0%,
+    rgba(212, 175, 55, 0.05) 100%
+  );
   border-radius: 30px;
   padding: 30px;
   transform-style: preserve-3d;
@@ -637,7 +706,11 @@ onUnmounted(() => {
   left: 10%;
   width: 80%;
   height: 30px;
-  background: linear-gradient(180deg, rgba(212, 175, 55, 0.1) 0%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(212, 175, 55, 0.1) 0%,
+    transparent 100%
+  );
   filter: blur(10px);
   border-radius: 50%;
   pointer-events: none;
@@ -650,7 +723,11 @@ onUnmounted(() => {
   transform: translate(-50%, -50%);
   width: 80%;
   height: 80%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0) 70%);
+  background: radial-gradient(
+    circle,
+    rgba(212, 175, 55, 0.2) 0%,
+    rgba(212, 175, 55, 0) 70%
+  );
   border-radius: 50%;
   opacity: 0;
   transition: opacity 0.5s ease;
@@ -667,7 +744,12 @@ onUnmounted(() => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.2),
+    transparent
+  );
   transition: left 0.6s ease;
   pointer-events: none;
   border-radius: 30px;
@@ -677,7 +759,7 @@ onUnmounted(() => {
   left: 100%;
 }
 
-/* Botões de navegação premium - CORRIGIDOS para mobile */
+/* Botões de navegação premium */
 .nav-btn-premium {
   position: fixed;
   top: 50%;
@@ -713,7 +795,7 @@ onUnmounted(() => {
   right: 16px;
 }
 
-/* Dots premium - touch friendly */
+/* Dots premium */
 .dots-premium {
   position: absolute;
   bottom: 30px;
@@ -736,7 +818,6 @@ onUnmounted(() => {
   padding: 0;
   position: relative;
   overflow: hidden;
-  /* Touch target enlargement */
   padding: 8px 0;
   margin: -8px 0;
   background-clip: content-box;
@@ -823,17 +904,11 @@ onUnmounted(() => {
   }
 }
 
-/* ========== RESPONSIVIDADE MOBILE FIRST ========== */
-
-/* Mobile (até 768px) */
+/* ========== RESPONSIVIDADE MOBILE ========== */
 @media (max-width: 768px) {
   .hero-banner-premium {
     min-height: 100vh;
     max-height: none;
-  }
-
-  .slideshow-container-premium {
-    min-height: 100vh;
   }
 
   .slide-content-premium {
@@ -869,20 +944,10 @@ onUnmounted(() => {
     font-size: 1.8rem;
   }
 
-  .price-installment-premium {
-    font-size: 0.85rem;
-  }
-
-  .slide-rating-premium {
-    justify-content: center;
-    margin-bottom: 24px;
-  }
-
   .slide-button-premium {
     justify-content: center;
     margin: 0 auto;
     padding: 12px 28px;
-    font-size: 0.9rem;
     width: 100%;
     max-width: 280px;
   }
@@ -897,20 +962,9 @@ onUnmounted(() => {
     max-width: 220px;
   }
 
-  .badge-wrapper {
-    margin-bottom: 16px;
-  }
-
-  .slide-badge-premium {
-    font-size: 0.75rem;
-    padding: 6px 16px;
-  }
-
-  /* Botões de navegação - sempre visíveis e não cortados */
   .nav-btn-premium {
     width: 44px;
     height: 44px;
-    background: rgba(11, 11, 15, 0.9);
   }
 
   .prev-premium {
@@ -933,16 +987,8 @@ onUnmounted(() => {
   .dot-premium.active {
     width: 44px;
   }
-
-  .slide-counter {
-    bottom: 20px;
-    right: 12px;
-    font-size: 0.75rem;
-    padding: 4px 12px;
-  }
 }
 
-/* Tablet (769px - 1024px) */
 @media (min-width: 769px) and (max-width: 1024px) {
   .hero-banner-premium {
     min-height: 90vh;
@@ -957,53 +1003,12 @@ onUnmounted(() => {
   .slide-title-premium {
     font-size: 2.2rem;
   }
-
-  .price-premium {
-    font-size: 1.8rem;
-  }
-
-  .image-wrapper img {
-    max-width: 320px;
-  }
-
-  .nav-btn-premium {
-    width: 48px;
-    height: 48px;
-  }
-
-  .prev-premium {
-    left: 20px;
-  }
-
-  .next-premium {
-    right: 20px;
-  }
-
-  .nav-btn-premium {
-    opacity: 0.7;
-  }
-  
-  .hero-banner-premium:hover .nav-btn-premium {
-    opacity: 0.9;
-  }
 }
 
-/* Desktop (1025px+) */
 @media (min-width: 1025px) {
   .hero-banner-premium {
     height: 700px;
     min-height: auto;
-  }
-
-  .slideshow-container-premium {
-    min-height: auto;
-    height: 100%;
-  }
-
-  .slide-content-premium {
-    min-height: auto;
-    height: 100%;
-    padding: 80px 60px;
   }
 
   .nav-btn-premium {
@@ -1032,29 +1037,15 @@ onUnmounted(() => {
     gap: 16px;
   }
 
-  .slide-button-premium:hover svg {
-    transform: translateX(5px);
-  }
-
   .image-wrapper:hover {
     transform: rotateY(5deg) rotateX(5deg);
   }
 
   .image-wrapper:hover img {
     transform: scale(1.05);
-    filter: drop-shadow(0 30px 40px rgba(212, 175, 55, 0.3));
-  }
-
-  .image-wrapper:hover .image-glow-premium {
-    opacity: 1;
-  }
-
-  .image-wrapper:hover .image-shine {
-    left: 100%;
   }
 }
 
-/* Prevenção de overflow */
 @media (max-width: 480px) {
   .slide-title-premium {
     font-size: 1.5rem;
@@ -1064,43 +1055,13 @@ onUnmounted(() => {
     font-size: 1.5rem;
   }
 
-  .stars-premium .star {
-    font-size: 0.9rem;
-  }
-
-  .rating-count-premium {
-    font-size: 0.75rem;
-  }
-
   .slide-button-premium {
     padding: 10px 24px;
     font-size: 0.85rem;
     min-height: 44px;
   }
-
-  .image-wrapper {
-    padding: 16px;
-    max-width: 240px;
-  }
-
-  .image-wrapper img {
-    max-width: 180px;
-  }
 }
 
-/* Performance improvements */
-.slide-bg,
-.image-wrapper img {
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-}
-
-.slide-premium {
-  will-change: opacity;
-}
-
-/* Reduzir movimento se preferido */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
