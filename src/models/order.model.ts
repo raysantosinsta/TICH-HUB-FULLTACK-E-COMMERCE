@@ -1,4 +1,6 @@
-import type { Product } from "../types";
+// src/models/order.model.ts
+
+import type { Product, Category } from "../types";
 
 export interface OrderItem {
   id: number;
@@ -6,7 +8,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   image: string;
-  category?: string;
+  category?: string;  // ← string, não Category
   discount?: number;
 }
 
@@ -295,6 +297,33 @@ export class Order {
   // ========== MÉTODOS ESTÁTICOS ==========
 
   /**
+   * Função auxiliar para extrair a imagem do produto
+   * @param product - Produto
+   * @returns URL da imagem
+   */
+  private static getProductImage(product: any): string {
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      return product.images[0];
+    }
+    if (product.image && typeof product.image === 'string') {
+      return product.image;
+    }
+    return '/placeholder-image.jpg';
+  }
+
+  /**
+   * Função auxiliar para extrair o nome da categoria
+   * @param category - Categoria (pode ser objeto ou string)
+   * @returns Nome da categoria como string
+   */
+  private static getCategoryName(category: any): string {
+    if (!category) return 'Sem categoria';
+    if (typeof category === 'string') return category;
+    if (category.name && typeof category.name === 'string') return category.name;
+    return 'Categoria';
+  }
+
+  /**
    * Cria um novo pedido a partir do carrinho
    */
   public static createFromCart(
@@ -314,8 +343,8 @@ export class Order {
       name: item.product.title,
       price: item.product.price,
       quantity: item.quantity,
-      image: item.product.image,
-      category: item.product.category,
+      image: this.getProductImage(item.product),  // ← usando a função auxiliar
+      category: this.getCategoryName(item.product.category),  // ← convertendo categoria para string
       discount: item.product.discount,
     }));
 
@@ -335,28 +364,25 @@ export class Order {
   /**
    * Gera um ID único para o pedido
    */
-  // src/models/order.model.ts
+  public static generateOrderId(userId?: number): string {
+    const now = new Date();
+    const parts = {
+      year: now.getFullYear(),
+      month: String(now.getMonth() + 1).padStart(2, "0"),
+      day: String(now.getDate()).padStart(2, "0"),
+      hours: String(now.getHours()).padStart(2, "0"),
+      minutes: String(now.getMinutes()).padStart(2, "0"),
+      seconds: String(now.getSeconds()).padStart(2, "0"),
+      random: Math.floor(Math.random() * 10000).toString().padStart(4, "0"),
+    };
 
-// Alterar o método generateOrderId para não usar o userId se não for necessário
-public static generateOrderId(userId?: number): string {
-  const now = new Date();
-  const parts = {
-    year: now.getFullYear(),
-    month: String(now.getMonth() + 1).padStart(2, "0"),
-    day: String(now.getDate()).padStart(2, "0"),
-    hours: String(now.getHours()).padStart(2, "0"),
-    minutes: String(now.getMinutes()).padStart(2, "0"),
-    seconds: String(now.getSeconds()).padStart(2, "0"),
-    random: Math.floor(Math.random() * 10000).toString().padStart(4, "0"),
-  };
-
-  // Se userId for fornecido, incluir no ID para melhor rastreabilidade
-  if (userId) {
-    return `ORD-${userId}-${parts.year}${parts.month}${parts.day}-${parts.hours}${parts.minutes}${parts.seconds}-${parts.random}`;
+    // Se userId for fornecido, incluir no ID para melhor rastreabilidade
+    if (userId) {
+      return `ORD-${userId}-${parts.year}${parts.month}${parts.day}-${parts.hours}${parts.minutes}${parts.seconds}-${parts.random}`;
+    }
+    
+    return `ORD-${parts.year}${parts.month}${parts.day}-${parts.hours}${parts.minutes}${parts.seconds}-${parts.random}`;
   }
-  
-  return `ORD-${parts.year}${parts.month}${parts.day}-${parts.hours}${parts.minutes}${parts.seconds}-${parts.random}`;
-}
 
   /**
    * Gera um código de rastreamento único
