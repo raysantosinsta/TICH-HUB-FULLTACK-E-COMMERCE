@@ -16,7 +16,7 @@
     </div>
     <div class="product-info">
       <h3 class="product-title">{{ truncateTitle(product.title) }}</h3>
-      <div class="product-rating" v-if="hasRating && product.rating.rate !== undefined">
+      <div class="product-rating" v-if="hasRating">
   <span class="stars">{{ getStarRating(product.rating.rate) }}</span>
   <span class="count">({{ product.rating.count || 0 }})</span>
 </div>

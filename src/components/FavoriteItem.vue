@@ -33,7 +33,7 @@
             v-for="i in 5"
             :key="i"
             class="star-premium"
-            :class="{ filled: i <= Math.floor(product.rating.rate || 0) }"
+            :class="{ filled: i <= Math.floor((product.rating?.rate || 0)) }"
           >
             ★
           </span>

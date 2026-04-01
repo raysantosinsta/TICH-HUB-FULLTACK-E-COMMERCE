@@ -2,39 +2,42 @@
   <section class="featured-products">
     <div class="container">
       <h2 class="section-title">Featured Products</h2>
-      
+
       <div v-if="loading" class="loading-spinner">
         <div class="spinner"></div>
         <p>Loading products...</p>
       </div>
-      
+
       <div v-else-if="error" class="error-message">
         <p>⚠️ {{ error }}</p>
         <button @click="retry" class="retry-btn">Retry</button>
       </div>
-      
+
       <div v-else class="products-grid">
-        <div 
-          v-for="product in products" 
-          :key="product.id"
-          class="product-card"
-        >
+        <div v-for="product in products" :key="product.id" class="product-card">
           <div class="product-image">
-            <img :src="product.image" :alt="product.title" loading="lazy">
+            <img :src="product.image" :alt="product.title" loading="lazy" />
             <div class="product-overlay">
               <button class="quick-view">Quick View</button>
             </div>
           </div>
           <div class="product-info">
             <h3 class="product-title">{{ truncateTitle(product.title) }}</h3>
-            <div class="product-rating" v-if="product.rating">
-  <span class="stars">{{ getStarRating(product.rating.rate) }}</span>
-  <span class="rating-count">({{ product.rating.count }})</span>
-</div>
-<div class="product-rating" v-else>
-  <span class="stars">☆☆☆☆☆</span>
-  <span class="rating-count">(0)</span>
-</div>
+            <div
+              class="product-rating"
+              v-if="product.rating && product.rating.rate !== undefined"
+            >
+              <span class="stars">{{
+                getStarRating(product.rating.rate)
+              }}</span>
+              <span class="rating-count"
+                >({{ product.rating.count || 0 }})</span
+              >
+            </div>
+            <div class="product-rating" v-else>
+              <span class="stars">☆☆☆☆☆</span>
+              <span class="rating-count">(0)</span>
+            </div>
             <div class="product-price">
               <span class="price">${{ product.price.toFixed(2) }}</span>
               <button class="add-to-cart">Add to Cart</button>
@@ -47,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Product } from '../types';
+import type { Product } from "../types";
 
 defineProps<{
   products: Product[];
@@ -56,12 +59,12 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'retry'): void;
+  (e: "retry"): void;
 }>();
 
 const truncateTitle = (title: string): string => {
   if (title.length > 50) {
-    return title.substring(0, 47) + '...';
+    return title.substring(0, 47) + "...";
   }
   return title;
 };
@@ -69,14 +72,14 @@ const truncateTitle = (title: string): string => {
 const getStarRating = (rate: number = 0): string => {
   const fullStars = Math.floor(rate);
   const hasHalfStar = rate % 1 >= 0.5;
-  let stars = '★'.repeat(fullStars);
-  if (hasHalfStar) stars += '½';
-  stars += '☆'.repeat(5 - Math.ceil(rate));
+  let stars = "★".repeat(fullStars);
+  if (hasHalfStar) stars += "½";
+  stars += "☆".repeat(5 - Math.ceil(rate));
   return stars;
 };
 
 const retry = () => {
-  emit('retry');
+  emit("retry");
 };
 </script>
 

@@ -6,7 +6,12 @@
       <div class="light-sweep-dynamic"></div>
       <div class="glass-overlay-advanced"></div>
       <div class="cart-particles">
-        <div v-for="i in 40" :key="i" class="cart-particle" :style="getParticleStyle(i)">
+        <div
+          v-for="i in 40"
+          :key="i"
+          class="cart-particle"
+          :style="getParticleStyle(i)"
+        >
           🛍️
         </div>
       </div>
@@ -17,11 +22,18 @@
         <div class="title-wrapper-premium">
           <div class="title-icon-premium">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-              <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <path
+                d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z"
+                stroke="currentColor"
+                stroke-width="1.5"
+                fill="none"
+              />
             </svg>
             <div class="icon-glow"></div>
           </div>
-          <h1 class="page-title-premium">Meu <span class="gold-text">Carrinho</span></h1>
+          <h1 class="page-title-premium">
+            Meu <span class="gold-text">Carrinho</span>
+          </h1>
         </div>
       </div>
 
@@ -31,7 +43,12 @@
           <div class="empty-cart-animation">
             <div class="shopping-bag">
               <svg width="120" height="120" viewBox="0 0 24 24" fill="none">
-                <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                <path
+                  d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V16.5M17 16.5C17 17.9 15.9 19 14.5 19C13.1 19 12 17.9 12 16.5C12 15.1 13.1 14 14.5 14C15.9 14 17 15.1 17 16.5ZM9 16.5C9 17.9 7.9 19 6.5 19C5.1 19 4 17.9 4 16.5C4 15.1 5.1 14 6.5 14C7.9 14 9 15.1 9 16.5Z"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  fill="none"
+                />
               </svg>
               <div class="floating-items">
                 <span>🛍️</span>
@@ -41,10 +58,18 @@
             </div>
           </div>
           <h2 class="empty-title">Seu carrinho está vazio</h2>
-          <p class="empty-description">Parece que você ainda não adicionou nenhum produto. Explore nossa coleção e encontre o que você ama!</p>
+          <p class="empty-description">
+            Parece que você ainda não adicionou nenhum produto. Explore nossa
+            coleção e encontre o que você ama!
+          </p>
           <router-link to="/" class="continue-shopping-premium">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12L12 5M5 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path
+                d="M19 12H5M5 12L12 5M5 12L12 19"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
             </svg>
             Explorar produtos
           </router-link>
@@ -63,70 +88,115 @@
             <span class="action-col-premium"></span>
           </div>
 
-          <transition-group name="cart-item" tag="div" class="cart-list-premium">
-            <div 
-              v-for="item in cartItems" 
+          <transition-group
+            name="cart-item"
+            tag="div"
+            class="cart-list-premium"
+          >
+            <div
+              v-for="item in cartItems"
               :key="item.product.id"
               class="cart-item-premium"
             >
               <div class="product-col-premium">
                 <div class="product-info-premium">
-                  <div class="product-image-premium" @click="goToProduct(item.product.id)">
+                  <div
+                    class="product-image-premium"
+                    @click="goToProduct(item.product.id)"
+                  >
                     <div class="image-wrapper-premium">
-                      <img :src="item.product.image" :alt="item.product.title">
+                      <img
+                        :src="item.product.image"
+                        :alt="item.product.title"
+                      />
                       <div class="image-shine"></div>
                     </div>
                   </div>
                   <div class="product-details-premium">
-                    <h3 class="product-title-premium" @click="goToProduct(item.product.id)">
+                    <h3
+                      class="product-title-premium"
+                      @click="goToProduct(item.product.id)"
+                    >
                       {{ truncateTitle(item.product.title) }}
                     </h3>
-                    <span class="product-category-premium">{{ formatCategory(item.product.category) }}</span>
-                    <div class="product-rating" v-if="item.product.rating && item.product.rating.rate">
-  <span class="stars">★ {{ item.product.rating.rate.toFixed(1) }}</span>
-</div>
-<div class="product-rating" v-else>
-  <span class="stars">☆ Sem avaliação</span>
-</div>
+                    <span class="product-category-premium">{{
+                      formatCategory(item.product.category)
+                    }}</span>
+                    <div
+                      class="product-rating"
+                      v-if="
+                        item.product.rating &&
+                        typeof item.product.rating.rate === 'number'
+                      "
+                    >
+                      <span class="stars"
+                        >★ {{ item.product.rating.rate.toFixed(1) }}</span
+                      >
+                    </div>
+                    <div class="product-rating" v-else>
+                      <span class="stars">☆ Sem avaliação</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div class="price-col-premium">
-                <span class="price-premium">{{ formatPrice(item.product.price) }}</span>
+                <span class="price-premium">{{
+                  formatPrice(item.product.price)
+                }}</span>
               </div>
 
               <div class="quantity-col-premium">
                 <div class="quantity-selector-premium">
-                  <button 
-                    class="qty-btn-premium" 
+                  <button
+                    class="qty-btn-premium"
                     @click="updateQuantity(item.product.id, item.quantity - 1)"
                     :disabled="item.quantity <= 1"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      <path
+                        d="M5 12H19"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
                     </svg>
                   </button>
                   <span class="qty-value-premium">{{ item.quantity }}</span>
-                  <button 
-                    class="qty-btn-premium" 
+                  <button
+                    class="qty-btn-premium"
                     @click="updateQuantity(item.product.id, item.quantity + 1)"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                      <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                      <path
+                        d="M12 5V19M5 12H19"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
                     </svg>
                   </button>
                 </div>
               </div>
 
               <div class="subtotal-col-premium">
-                <span class="subtotal-premium">{{ formatPrice(item.product.price * item.quantity) }}</span>
+                <span class="subtotal-premium">{{
+                  formatPrice(item.product.price * item.quantity)
+                }}</span>
               </div>
 
               <div class="action-col-premium">
-                <button class="remove-btn-premium" @click="removeItem(item.product.id, item.product.title)">
+                <button
+                  class="remove-btn-premium"
+                  @click="removeItem(item.product.id, item.product.title)"
+                >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path
+                      d="M18 6L6 18M6 6L18 18"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                    />
                   </svg>
                   <span class="tooltip-remove">Remover</span>
                 </button>
@@ -141,29 +211,31 @@
             <h3 class="summary-title-premium">Resumo do Pedido</h3>
             <div class="summary-glow"></div>
           </div>
-          
+
           <div class="summary-row-premium">
             <span>Subtotal</span>
             <span>{{ formatPrice(subtotal) }}</span>
           </div>
-          
+
           <div class="summary-row-premium">
             <span>Frete</span>
-            <span class="shipping-value">{{ shipping === 0 ? 'Grátis' : formatPrice(shipping) }}</span>
+            <span class="shipping-value">{{
+              shipping === 0 ? "Grátis" : formatPrice(shipping)
+            }}</span>
           </div>
-          
+
           <div v-if="discount > 0" class="summary-row-premium discount">
             <span>Desconto (10%)</span>
             <span>- {{ formatPrice(discount) }}</span>
           </div>
-          
+
           <div class="summary-divider"></div>
-          
+
           <div class="summary-row-premium total">
             <span>Total</span>
             <span class="total-value">{{ formatPrice(total) }}</span>
           </div>
-          
+
           <div class="payment-methods-premium">
             <div class="payment-icons">
               <span>Pix</span>
@@ -172,19 +244,39 @@
             </div>
             <p class="secure-payment">🔒 Compra 100% segura</p>
           </div>
-          
+
           <div class="summary-actions-premium">
             <router-link to="/" class="continue-btn-premium">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M19 12H5M5 12L12 5M5 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path
+                  d="M19 12H5M5 12L12 5M5 12L12 19"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
               </svg>
               Continuar comprando
             </router-link>
-            <button class="checkout-btn-premium" @click="finalizeOrder" :disabled="checkoutLoading">
+            <button
+              class="checkout-btn-premium"
+              @click="finalizeOrder"
+              :disabled="checkoutLoading"
+            >
               <span v-if="checkoutLoading" class="spinner-premium"></span>
               <span v-else>Finalizar compra</span>
-              <svg v-if="!checkoutLoading" width="18" height="18" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <svg
+                v-if="!checkoutLoading"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <path
+                  d="M5 12H19M19 12L12 5M19 12L12 19"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
               </svg>
             </button>
           </div>
@@ -195,28 +287,28 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useCartStore } from '../stores/cart'
-import { useOrdersStore } from '../stores/orders'
-import { useAuthStore } from '../stores/auth'
-import { useToast } from '../plugins/toast'
-import { useConfirm } from '../plugins/confirm'
+import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import { useCartStore } from "../stores/cart";
+import { useOrdersStore } from "../stores/orders";
+import { useAuthStore } from "../stores/auth";
+import { useToast } from "../plugins/toast";
+import { useConfirm } from "../plugins/confirm";
 
-const router = useRouter()
-const cartStore = useCartStore()
-const ordersStore = useOrdersStore()
-const authStore = useAuthStore()
-const toast = useToast()
-const { confirm } = useConfirm()
+const router = useRouter();
+const cartStore = useCartStore();
+const ordersStore = useOrdersStore();
+const authStore = useAuthStore();
+const toast = useToast();
+const { confirm } = useConfirm();
 
-const checkoutLoading = ref(false)
+const checkoutLoading = ref(false);
 
-const cartItems = computed(() => cartStore.items)
-const subtotal = computed(() => cartStore.subtotal)
-const shipping = computed(() => cartStore.shipping)
-const discount = computed(() => cartStore.discount)
-const total = computed(() => cartStore.total)
+const cartItems = computed(() => cartStore.items);
+const subtotal = computed(() => cartStore.subtotal);
+const shipping = computed(() => cartStore.shipping);
+const discount = computed(() => cartStore.discount);
+const total = computed(() => cartStore.total);
 
 const getParticleStyle = (index: number) => {
   return {
@@ -224,117 +316,134 @@ const getParticleStyle = (index: number) => {
     top: `${Math.random() * 100}%`,
     animationDelay: `${Math.random() * 15}s`,
     animationDuration: `${12 + Math.random() * 15}s`,
-    opacity: 0.1 + Math.random() * 0.3
-  }
-}
+    opacity: 0.1 + Math.random() * 0.3,
+  };
+};
 
 const formatPrice = (price: number) => {
-  return price.toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  })
-}
+  return price.toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+};
 
 const formatCategory = (category: string) => {
   const categories: Record<string, string> = {
     "men's clothing": "Moda Masculina",
     "women's clothing": "Moda Feminina",
-    "jewelery": "Jóias Exclusivas",
-    "electronics": "Tecnologia Premium"
-  }
-  return categories[category] || category
-}
+    jewelery: "Jóias Exclusivas",
+    electronics: "Tecnologia Premium",
+  };
+  return categories[category] || category;
+};
 
 const truncateTitle = (title: string) => {
-  return title.length > 50 ? title.substring(0, 47) + '...' : title
-}
+  return title.length > 50 ? title.substring(0, 47) + "..." : title;
+};
 
 const updateQuantity = (productId: number, quantity: number) => {
-  cartStore.updateQuantity(productId, quantity)
-}
+  cartStore.updateQuantity(productId, quantity);
+};
 
 const removeItem = (productId: number, productTitle: string) => {
-  cartStore.removeFromCart(productId)
-  toast.success('Item removido', `${productTitle} foi removido do carrinho.`, 3000)
-}
+  cartStore.removeFromCart(productId);
+  toast.success(
+    "Item removido",
+    `${productTitle} foi removido do carrinho.`,
+    3000,
+  );
+};
 
 const goToProduct = (productId: number) => {
-  router.push(`/product/${productId}`)
-  window.scrollTo({ top: 0, behavior: 'smooth' })
-}
+  router.push(`/product/${productId}`);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
 
 const finalizeOrder = async () => {
   if (!authStore.isAuthenticated) {
     const result = await confirm({
-      title: 'Login necessário',
-      message: 'Você precisa estar logado para finalizar a compra. Deseja fazer login agora?',
-      confirmText: 'Fazer login',
-      cancelText: 'Cancelar',
-      type: 'info'
-    })
-    
+      title: "Login necessário",
+      message:
+        "Você precisa estar logado para finalizar a compra. Deseja fazer login agora?",
+      confirmText: "Fazer login",
+      cancelText: "Cancelar",
+      type: "info",
+    });
+
     if (result) {
-      router.push('/login')
+      router.push("/login");
     }
-    return
+    return;
   }
 
   if (cartItems.value.length === 0) {
-    toast.warning('Carrinho vazio', 'Adicione produtos ao carrinho antes de finalizar.', 3000)
-    return
+    toast.warning(
+      "Carrinho vazio",
+      "Adicione produtos ao carrinho antes de finalizar.",
+      3000,
+    );
+    return;
   }
 
   const result = await confirm({
-    title: 'Finalizar compra',
+    title: "Finalizar compra",
     message: `Deseja finalizar a compra no valor total de ${formatPrice(total.value)}?`,
-    confirmText: 'Confirmar compra',
-    cancelText: 'Cancelar',
-    type: 'warning'
-  })
+    confirmText: "Confirmar compra",
+    cancelText: "Cancelar",
+    type: "warning",
+  });
 
-  if (!result) return
+  if (!result) return;
 
-  checkoutLoading.value = true
+  checkoutLoading.value = true;
 
   try {
-    const orderItems = cartItems.value.map(item => ({
+    const orderItems = cartItems.value.map((item) => ({
       product: {
         id: item.product.id,
         title: item.product.title,
         price: item.product.price,
         image: item.product.image,
         category: item.product.category,
-        discount: item.product.discount || 0
+        discount: item.product.discount || 0,
       },
-      quantity: item.quantity
-    }))
+      quantity: item.quantity,
+    }));
 
     const order = ordersStore.createOrder(
       orderItems,
       subtotal.value,
       shipping.value,
       discount.value,
-      total.value
-    )
+      total.value,
+    );
 
     if (order) {
-      cartStore.clearCart()
-      toast.success('Pedido finalizado!', `Pedido ${order.id} foi criado com sucesso.`, 4000)
-      router.push('/orders')
+      cartStore.clearCart();
+      toast.success(
+        "Pedido finalizado!",
+        `Pedido ${order.id} foi criado com sucesso.`,
+        4000,
+      );
+      router.push("/orders");
     } else {
-      throw new Error('Erro ao criar pedido')
+      throw new Error("Erro ao criar pedido");
     }
   } catch (error) {
-    console.error('Erro ao finalizar pedido:', error)
-    toast.error('Erro', 'Não foi possível finalizar o pedido. Tente novamente.', 4000)
+    console.error("Erro ao finalizar pedido:", error);
+    toast.error(
+      "Erro",
+      "Não foi possível finalizar o pedido. Tente novamente.",
+      4000,
+    );
   } finally {
-    checkoutLoading.value = false
+    checkoutLoading.value = false;
   }
-}
+};
 
 onMounted(() => {
-  cartStore.loadCart()
-})
+  cartStore.loadCart();
+});
 </script>
 
 <style scoped>
@@ -362,16 +471,29 @@ onMounted(() => {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: 
-    radial-gradient(circle at 20% 30%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
-    linear-gradient(135deg, #0B0B0F 0%, #13131A 100%);
+  background:
+    radial-gradient(
+      circle at 20% 30%,
+      rgba(212, 175, 55, 0.08) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 80% 70%,
+      rgba(212, 175, 55, 0.05) 0%,
+      transparent 50%
+    ),
+    linear-gradient(135deg, #0b0b0f 0%, #13131a 100%);
   animation: gradientPulseCart 8s ease-in-out infinite;
 }
 
 @keyframes gradientPulseCart {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .light-sweep-dynamic {
@@ -396,11 +518,23 @@ onMounted(() => {
 }
 
 @keyframes lightSweepCart {
-  0% { background-position: -100% 0%; opacity: 0; }
-  20% { opacity: 0.5; }
-  40% { opacity: 1; }
-  60% { opacity: 0.5; }
-  100% { background-position: 200% 0%; opacity: 0; }
+  0% {
+    background-position: -100% 0%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.5;
+  }
+  40% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 0.5;
+  }
+  100% {
+    background-position: 200% 0%;
+    opacity: 0;
+  }
 }
 
 .glass-overlay-advanced {
@@ -484,7 +618,8 @@ onMounted(() => {
 }
 
 @keyframes iconPulseCart {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   50% {
@@ -499,13 +634,18 @@ onMounted(() => {
   transform: translate(-50%, -50%);
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.3) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(212, 175, 55, 0.3) 0%,
+    transparent 70%
+  );
   border-radius: 50%;
   animation: iconGlowCart 2s ease-in-out infinite;
 }
 
 @keyframes iconGlowCart {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.5;
     transform: translate(-50%, -50%) scale(1);
   }
@@ -519,14 +659,14 @@ onMounted(() => {
   font-size: 2.5rem;
   font-weight: 800;
   margin: 0;
-  background: linear-gradient(135deg, #F5F0E6 0%, #D4AF37 100%);
+  background: linear-gradient(135deg, #f5f0e6 0%, #d4af37 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
 .page-title-premium .gold-text {
-  background: linear-gradient(135deg, var(--gold-primary) 0%, #F5E6A0 100%);
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #f5e6a0 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -570,7 +710,8 @@ onMounted(() => {
 }
 
 @keyframes floatBag {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -614,7 +755,8 @@ onMounted(() => {
 }
 
 @keyframes floatItem {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0) scale(1);
     opacity: 0.5;
   }
@@ -759,7 +901,12 @@ onMounted(() => {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 175, 55, 0.2),
+    transparent
+  );
   transition: left 0.5s ease;
   pointer-events: none;
 }
@@ -958,7 +1105,7 @@ onMounted(() => {
 }
 
 .total-value {
-  background: linear-gradient(135deg, var(--gold-primary) 0%, #F5E6A0 100%);
+  background: linear-gradient(135deg, var(--gold-primary) 0%, #f5e6a0 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1054,14 +1201,16 @@ onMounted(() => {
 .spinner-premium {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(0,0,0,0.2);
+  border: 2px solid rgba(0, 0, 0, 0.2);
   border-top-color: var(--black-primary);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Cart Item Transition */
@@ -1090,46 +1239,46 @@ onMounted(() => {
   .container-premium {
     padding: 0 24px;
   }
-  
+
   .cart-content-premium {
     grid-template-columns: 1fr;
     gap: 30px;
   }
-  
+
   .order-summary-premium {
     position: static;
   }
-  
+
   .cart-header-premium {
     display: none;
   }
-  
+
   .cart-item-premium {
     grid-template-columns: 1fr;
     gap: 16px;
     position: relative;
     padding: 20px;
   }
-  
+
   .product-col-premium {
     grid-column: 1 / -1;
   }
-  
+
   .product-info-premium {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .product-image-premium {
     width: 120px;
     height: 120px;
     margin: 0 auto;
   }
-  
+
   .product-details-premium {
     text-align: center;
   }
-  
+
   .price-col-premium,
   .quantity-col-premium,
   .subtotal-col-premium {
@@ -1138,31 +1287,31 @@ onMounted(() => {
     align-items: center;
     padding: 8px 0;
   }
-  
+
   .price-col-premium::before {
     content: "Preço:";
     color: rgba(245, 240, 230, 0.6);
     font-weight: 500;
   }
-  
+
   .quantity-col-premium::before {
     content: "Quantidade:";
     color: rgba(245, 240, 230, 0.6);
     font-weight: 500;
   }
-  
+
   .subtotal-col-premium::before {
     content: "Subtotal:";
     color: rgba(245, 240, 230, 0.6);
     font-weight: 500;
   }
-  
+
   .action-col-premium {
     position: absolute;
     top: 20px;
     right: 20px;
   }
-  
+
   .quantity-selector-premium {
     justify-content: center;
   }
@@ -1172,37 +1321,37 @@ onMounted(() => {
   .cart-page-premium {
     padding: 40px 0 60px;
   }
-  
+
   .container-premium {
     padding: 0 16px;
   }
-  
+
   .page-title-premium {
     font-size: 1.8rem;
   }
-  
+
   .title-wrapper-premium {
     gap: 12px;
   }
-  
+
   .title-icon-premium svg {
     width: 32px;
     height: 32px;
   }
-  
+
   .cart-items-premium {
     padding: 20px;
   }
-  
+
   .empty-cart-card-premium {
     padding: 40px 24px;
     margin: 0 16px;
   }
-  
+
   .empty-title {
     font-size: 1.3rem;
   }
-  
+
   .empty-description {
     font-size: 0.9rem;
   }
@@ -1212,51 +1361,51 @@ onMounted(() => {
   .page-title-premium {
     font-size: 1.4rem;
   }
-  
+
   .cart-items-premium {
     padding: 16px;
   }
-  
+
   .product-image-premium {
     width: 100px;
     height: 100px;
   }
-  
+
   .product-title-premium {
     font-size: 0.85rem;
   }
-  
+
   .price-premium,
   .subtotal-premium {
     font-size: 0.9rem;
   }
-  
+
   .qty-value-premium {
     min-width: 30px;
     font-size: 0.85rem;
   }
-  
+
   .qty-btn-premium {
     width: 28px;
     height: 28px;
   }
-  
+
   .order-summary-premium {
     padding: 24px;
   }
-  
+
   .summary-title-premium {
     font-size: 1.1rem;
   }
-  
+
   .total-value {
     font-size: 1.1rem;
   }
-  
+
   .payment-icons {
     gap: 12px;
   }
-  
+
   .payment-icons span {
     font-size: 0.7rem;
     padding: 3px 10px;
