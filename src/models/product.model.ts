@@ -14,6 +14,12 @@ export class Product {
   public readonly rating: ProductRating;
   public readonly discount?: number;
 
+  // Campos adicionais da nova API
+  public readonly slug?: string;
+  public readonly images?: string[];
+  public readonly creationAt?: string;
+  public readonly updatedAt?: string;
+
   // ========== CONSTRUTOR ==========
   constructor(
     id: number,
@@ -24,6 +30,10 @@ export class Product {
     image: string,
     rating: ProductRating,
     discount?: number,
+    slug?: string,
+    images?: string[],
+    creationAt?: string,
+    updatedAt?: string,
   ) {
     this.id = id;
     this.title = title;
@@ -32,7 +42,11 @@ export class Product {
     this.image = image;
     this.rating = rating;
     this.discount = discount;
-    this.price = price
+    this.price = price;
+    this.slug = slug;
+    this.images = images;
+    this.creationAt = creationAt;
+    this.updatedAt = updatedAt;
   }
 
   // ========== GETTERS ==========
@@ -62,11 +76,11 @@ export class Product {
     const { rate } = this.rating;
     const fullStars = Math.floor(rate);
     const hasHalfStar = rate % 1 >= 0.5;
-    
+
     const stars = "★".repeat(fullStars);
     const halfStar = hasHalfStar ? "½" : "";
     const emptyStars = "☆".repeat(5 - Math.ceil(rate));
-    
+
     return stars + halfStar + emptyStars;
   }
 
@@ -92,8 +106,12 @@ export class Product {
       "women's clothing": "Moda Feminina",
       jewelery: "Jóias",
       electronics: "Eletrônicos",
+      clothes: "Roupas",
+      furniture: "Móveis",
+      shoes: "Calçados",
+      miscellaneous: "Diversos",
     };
-    return categoryMap[this.category] || this.category;
+    return categoryMap[this.category.toLowerCase()] || this.category;
   }
 
   // ========== MÉTODOS PÚBLICOS (Compatibilidade) ==========
@@ -205,39 +223,61 @@ export class Product {
 
   // ========== MÉTODOS ESTÁTICOS ==========
 
-  /**
-   * Cria um produto a partir dos dados da API
-   * @param data - Dados do produto da API
-   */
-  public static fromAPI(data: {
-    id: number;
-    title: string;
-    price: number;
-    description: string;
-    category: string;
-    image: string;
-    rating?: { rate: number; count: number };
-    discount?: number;
-  }): Product {
-    return new Product(
-      data.id,
-      data.title,
-      data.price,
-      data.description,
-      data.category,
-      data.image,
-      data.rating ?? { rate: 0, count: 0 },
-      data.discount ?? 0,
-    );
+ public static fromAPI(data: any): Product {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Dados inválidos para criar produto');
   }
 
-  /**
-   * Cria uma lista de produtos a partir dos dados da API
-   * @param dataList - Lista de dados da API
-   */
-  public static fromAPIList(dataList: any[]): Product[] {
-    return dataList.map((data) => Product.fromAPI(data));
+  let imageUrl = data.image || "";
+  if (!imageUrl && data.images?.length > 0) {
+    imageUrl = data.images[0];
   }
+
+  let categoryName = typeof data.category === "object" && data.category !== null
+    ? (data.category as any).name || ""
+    : (data.category || "");
+
+  const rating = data.rating || { rate: 0, count: 0 };
+
+  return new Product(
+    data.id,
+    data.title,
+    data.price,
+    data.description,
+    categoryName,
+    imageUrl,
+    rating,
+    data.discount ?? 0,
+    data.slug,
+    data.images,
+    data.creationAt,
+    data.updatedAt,
+  );
+}
+
+/**
+ * Cria uma lista de produtos a partir dos dados da API
+ * @param dataList - Lista de dados da API
+ */
+public static fromAPIList(dataList: any[]): Product[] {
+  if (!Array.isArray(dataList)) {
+    console.error("fromAPIList: dataList não é um array", dataList);
+    return [];
+  }
+
+  const products: Product[] = [];
+  
+  for (const data of dataList) {
+    try {
+      const product = Product.fromAPI(data);
+      products.push(product);
+    } catch (err) {
+      console.error("Erro ao criar produto:", data, err);
+    }
+  }
+  
+  return products;
+}
 
   /**
    * Converte o produto para objeto simples (para salvar no localStorage)
@@ -251,6 +291,8 @@ export class Product {
     image: string;
     rating: ProductRating;
     discount?: number;
+    slug?: string;
+    images?: string[];
   } {
     return {
       id: this.id,
@@ -261,6 +303,8 @@ export class Product {
       image: this.image,
       rating: this.rating,
       discount: this.discount,
+      slug: this.slug,
+      images: this.images,
     };
   }
 }

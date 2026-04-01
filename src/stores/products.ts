@@ -4,14 +4,15 @@ import { Product } from "../models/product.model";
 
 export const useProductsStore = defineStore("products", () => {
   // ========== CONSTANTES ==========
-  // Opção 1: Usar proxy CORS
- const API_BASE_URL = '/api/products'
+  // Nova API da Platzi - suporta CORS nativamente
+  const API_BASE_URL = "https://api.escuelajs.co/api/v1/products";
 
   // ========== ESTADO ==========
   const products = ref<Product[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
   const selectedCategory = ref<string>("");
+  const categoriesList = ref<{ id: number; name: string }[]>([]);
 
   // ========== GETTERS ==========
 
@@ -43,7 +44,7 @@ export const useProductsStore = defineStore("products", () => {
   /** Produtos mais bem avaliados (top 10) */
   const topRatedProducts = computed(() => {
     return [...products.value]
-      .sort((a, b) => b.rating.rate - a.rating.rate)
+      .sort((a, b) => (b.rating?.rate || 0) - (a.rating?.rate || 0))
       .slice(0, 10);
   });
 
@@ -56,30 +57,35 @@ export const useProductsStore = defineStore("products", () => {
    */
   const fetchFromAPI = async (url: string): Promise<any[]> => {
     try {
+      console.log("Fetching:", url);
       const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`Erro HTTP: ${response.status}`);
       }
 
-      return response.json();
+      const data = await response.json();
+      console.log("Dados recebidos:", data.length);
+      return data;
     } catch (err) {
-      // Tratamento específico para CORS
       if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
         throw new Error(
-          "Erro de CORS: Não foi possível acessar a API. Verifique sua conexão ou tente novamente mais tarde.",
+          "Erro de conexão: Não foi possível acessar a API. Verifique sua conexão com a internet.",
         );
       }
       throw err;
     }
   };
 
-  /**
-   * Processa os dados da API e atualiza o estado
-   * @param data - Dados da API
-   */
   const processProductsData = (data: any[]): void => {
-    products.value = Product.fromAPIList(data);
+    if (!Array.isArray(data)) {
+      console.error("processProductsData: data não é um array", data);
+      products.value = [];
+      return;
+    }
+
+    products.value = Product.fromAPIList(data); // ← Use isso!
+    console.log("Produtos processados:", products.value.length);
   };
 
   /**
@@ -112,7 +118,6 @@ export const useProductsStore = defineStore("products", () => {
       processProductsData(data);
     } catch (err) {
       setError(err);
-      // Lançar o erro para que o componente possa tratar
       throw err;
     } finally {
       loading.value = false;
@@ -121,26 +126,59 @@ export const useProductsStore = defineStore("products", () => {
 
   /**
    * Busca produtos por categoria da API
-   * @param category - Categoria dos produtos
+   * @param categoryName - Nome da categoria
    */
-  const fetchProductsByCategory = async (category: string): Promise<void> => {
+  const fetchProductsByCategory = async (
+    categoryName: string,
+  ): Promise<void> => {
     loading.value = true;
     clearError();
 
     try {
-      // Para categorias, também precisa usar o proxy
-      const proxyUrl = "https://cors-anywhere.herokuapp.com/";
-      const apiUrl = `https://fakestoreapi.com/products/category/${encodeURIComponent(category)}`;
-      const url = `${proxyUrl}${apiUrl}`;
+      // Primeiro, busca todas as categorias para encontrar o ID
+      const categoriesResponse = await fetch(
+        "https://api.escuelajs.co/api/v1/categories",
+      );
+      const categories = await categoriesResponse.json();
 
-      const data = await fetchFromAPI(url);
-      processProductsData(data);
-      selectedCategory.value = category;
+      const category = categories.find(
+        (cat: any) => cat.name.toLowerCase() === categoryName.toLowerCase(),
+      );
+
+      if (category) {
+        // Busca produtos pela categoria ID
+        const url = `${API_BASE_URL}/?categoryId=${category.id}`;
+        const data = await fetchFromAPI(url);
+        processProductsData(data);
+        selectedCategory.value = categoryName;
+      } else {
+        // Se não encontrar a categoria, faz filtro local
+        const filteredProducts = products.value.filter(
+          (p) => p.category.toLowerCase() === categoryName.toLowerCase(),
+        );
+        products.value = filteredProducts;
+        selectedCategory.value = categoryName;
+      }
     } catch (err) {
       setError(err);
       throw err;
     } finally {
       loading.value = false;
+    }
+  };
+
+  /**
+   * Busca todas as categorias disponíveis
+   */
+  const fetchCategories = async (): Promise<void> => {
+    try {
+      const response = await fetch(
+        "https://api.escuelajs.co/api/v1/categories",
+      );
+      const data = await response.json();
+      categoriesList.value = data;
+    } catch (err) {
+      console.error("Erro ao buscar categorias:", err);
     }
   };
 
@@ -152,12 +190,33 @@ export const useProductsStore = defineStore("products", () => {
     return products.value.filter((p) => p.category === category) as Product[];
   };
 
-  /**
-   * Busca um produto pelo ID
-   * @param id - ID do produto
-   */
-  const getProductById = (id: number): Product | undefined => {
-    return products.value.find((p) => p.id === id) as Product;
+  const getProductById = async (id: number): Promise<Product | undefined> => {
+    // Primeiro tenta encontrar no estado local
+    const localProduct = products.value.find((p) => p.id === id);
+    if (localProduct) {
+      return localProduct as any;
+    }
+
+    try {
+      const url = `${API_BASE_URL}/${id}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        console.error(`HTTP ${response.status} ao buscar produto ${id}`);
+        return undefined;
+      }
+
+      const data = await response.json();
+      if (!data || Object.keys(data).length === 0) {
+        return undefined;
+      }
+
+      // Usa o método estático (muito mais limpo)
+      const product = Product.fromAPI(data);
+      return product;
+    } catch (err) {
+      console.error("Erro ao buscar produto:", err);
+      return undefined;
+    }
   };
 
   /**
@@ -208,7 +267,8 @@ export const useProductsStore = defineStore("products", () => {
   };
 
   // ========== INICIALIZAÇÃO ==========
-  // Os produtos são carregados sob demanda, não automaticamente
+  // Carrega as categorias ao iniciar
+  fetchCategories();
 
   // ========== RETORNO ==========
   return {
@@ -217,6 +277,7 @@ export const useProductsStore = defineStore("products", () => {
     loading,
     error,
     selectedCategory,
+    categoriesList,
 
     // Getters
     featuredProducts,
@@ -230,6 +291,7 @@ export const useProductsStore = defineStore("products", () => {
     // Actions
     fetchProducts,
     fetchProductsByCategory,
+    fetchCategories,
     getProductById,
     getProductsByCategory,
     searchProducts,
