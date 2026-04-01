@@ -1,6 +1,6 @@
 // src/models/order.model.ts
 
-import type { Product, Category } from "../types";
+import type { Product } from "../types";
 
 export interface OrderItem {
   id: number;
