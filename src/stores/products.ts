@@ -1,44 +1,46 @@
-import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
-import { Product } from '../models/product.model';
+import { defineStore } from "pinia";
+import { computed, ref } from "vue";
+import { Product } from "../models/product.model";
 
-export const useProductsStore = defineStore('products', () => {
+export const useProductsStore = defineStore("products", () => {
   // ========== CONSTANTES ==========
-  const API_BASE_URL = 'https://fakestoreapi.com/products';
-  
+  // Opção 1: Usar proxy CORS
+  const API_BASE_URL =
+    "https://cors-anywhere.herokuapp.com/https://fakestoreapi.com/products";
+
   // ========== ESTADO ==========
   const products = ref<Product[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
-  const selectedCategory = ref<string>('');
+  const selectedCategory = ref<string>("");
 
   // ========== GETTERS ==========
 
   /** Produtos em destaque (primeiros 8) */
   const featuredProducts = computed(() => products.value.slice(0, 8));
-  
+
   /** Lista única de categorias disponíveis */
   const categories = computed(() => {
-    return [...new Set(products.value.map(p => p.category))];
+    return [...new Set(products.value.map((p) => p.category))];
   });
-  
+
   /** Produtos filtrados pela categoria selecionada */
   const productsByCategory = computed(() => {
     if (!selectedCategory.value) return products.value;
-    return products.value.filter(p => p.category === selectedCategory.value);
+    return products.value.filter((p) => p.category === selectedCategory.value);
   });
-  
+
   /** Total de produtos */
   const totalProducts = computed(() => products.value.length);
-  
+
   /** Verifica se há produtos */
   const hasProducts = computed(() => products.value.length > 0);
-  
+
   /** Produtos com desconto */
   const discountedProducts = computed(() => {
-    return products.value.filter(p => p.hasDiscount());
+    return products.value.filter((p) => p.hasDiscount());
   });
-  
+
   /** Produtos mais bem avaliados (top 10) */
   const topRatedProducts = computed(() => {
     return [...products.value]
@@ -54,11 +56,23 @@ export const useProductsStore = defineStore('products', () => {
    * @returns Dados da resposta
    */
   const fetchFromAPI = async (url: string): Promise<any[]> => {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Erro HTTP: ${response.status}`);
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (err) {
+      // Tratamento específico para CORS
+      if (err instanceof TypeError && err.message.includes("Failed to fetch")) {
+        throw new Error(
+          "Erro de CORS: Não foi possível acessar a API. Verifique sua conexão ou tente novamente mais tarde.",
+        );
+      }
+      throw err;
     }
-    return response.json();
   };
 
   /**
@@ -74,8 +88,8 @@ export const useProductsStore = defineStore('products', () => {
    * @param err - Erro capturado
    */
   const setError = (err: unknown): void => {
-    error.value = err instanceof Error ? err.message : 'Erro desconhecido';
-    console.error('[ProductsStore] Erro:', err);
+    error.value = err instanceof Error ? err.message : "Erro desconhecido";
+    console.error("[ProductsStore] Erro:", err);
   };
 
   /**
@@ -93,12 +107,14 @@ export const useProductsStore = defineStore('products', () => {
   const fetchProducts = async (): Promise<void> => {
     loading.value = true;
     clearError();
-    
+
     try {
       const data = await fetchFromAPI(API_BASE_URL);
       processProductsData(data);
     } catch (err) {
       setError(err);
+      // Lançar o erro para que o componente possa tratar
+      throw err;
     } finally {
       loading.value = false;
     }
@@ -111,14 +127,19 @@ export const useProductsStore = defineStore('products', () => {
   const fetchProductsByCategory = async (category: string): Promise<void> => {
     loading.value = true;
     clearError();
-    
+
     try {
-      const url = `${API_BASE_URL}/category/${encodeURIComponent(category)}`;
+      // Para categorias, também precisa usar o proxy
+      const proxyUrl = "https://cors-anywhere.herokuapp.com/";
+      const apiUrl = `https://fakestoreapi.com/products/category/${encodeURIComponent(category)}`;
+      const url = `${proxyUrl}${apiUrl}`;
+
       const data = await fetchFromAPI(url);
       processProductsData(data);
       selectedCategory.value = category;
     } catch (err) {
       setError(err);
+      throw err;
     } finally {
       loading.value = false;
     }
@@ -129,7 +150,7 @@ export const useProductsStore = defineStore('products', () => {
    * @param category - Categoria dos produtos
    */
   const getProductsByCategory = (category: string): Product[] => {
-    return products.value.filter(p => p.category === category) as Product[];
+    return products.value.filter((p) => p.category === category) as Product[];
   };
 
   /**
@@ -137,7 +158,7 @@ export const useProductsStore = defineStore('products', () => {
    * @param id - ID do produto
    */
   const getProductById = (id: number): Product | undefined => {
-    return products.value.find(p => p.id === id) as Product;
+    return products.value.find((p) => p.id === id) as Product;
   };
 
   /**
@@ -147,11 +168,12 @@ export const useProductsStore = defineStore('products', () => {
   const searchProducts = (query: string): Product[] => {
     const searchTerm = query.toLowerCase().trim();
     if (!searchTerm) return products.value as Product[];
-    
-    return products.value.filter(product => 
-      product.title.toLowerCase().includes(searchTerm) ||
-      product.description.toLowerCase().includes(searchTerm) ||
-      product.category.toLowerCase().includes(searchTerm)
+
+    return products.value.filter(
+      (product) =>
+        product.title.toLowerCase().includes(searchTerm) ||
+        product.description.toLowerCase().includes(searchTerm) ||
+        product.category.toLowerCase().includes(searchTerm),
     ) as Product[];
   };
 
@@ -167,7 +189,7 @@ export const useProductsStore = defineStore('products', () => {
    * Limpa o filtro de categoria selecionada
    */
   const clearCategoryFilter = (): void => {
-    selectedCategory.value = '';
+    selectedCategory.value = "";
   };
 
   /**
@@ -175,7 +197,7 @@ export const useProductsStore = defineStore('products', () => {
    */
   const clearProducts = (): void => {
     products.value = [];
-    selectedCategory.value = '';
+    selectedCategory.value = "";
     clearError();
   };
 
@@ -196,7 +218,7 @@ export const useProductsStore = defineStore('products', () => {
     loading,
     error,
     selectedCategory,
-    
+
     // Getters
     featuredProducts,
     categories,
@@ -205,7 +227,7 @@ export const useProductsStore = defineStore('products', () => {
     hasProducts,
     discountedProducts,
     topRatedProducts,
-    
+
     // Actions
     fetchProducts,
     fetchProductsByCategory,
