@@ -21,13 +21,15 @@ export class Product {
   constructor(data: any) {
     this.id = data.id || 0;
     this.title = data.title || "";
-    this.price = typeof data.price === 'number' ? data.price : Number(data.price) || 0;
+    this.price =
+      typeof data.price === "number" ? data.price : Number(data.price) || 0;
     this.description = data.description || "";
     this.category = data.category || "";
     this.image = data.image || data.images?.[0] || "";
-   this.rating = data.rating && typeof data.rating === 'object'
-      ? { rate: data.rating.rate || 0, count: data.rating.count || 0 }
-      : { rate: 0, count: 0 };
+    this.rating =
+      data.rating && typeof data.rating === "object"
+        ? { rate: data.rating.rate || 0, count: data.rating.count || 0 }
+        : { rate: 0, count: 0 };
     this.discount = data.discount || 0;
     this.slug = data.slug;
     this.images = data.images || [];
@@ -51,7 +53,7 @@ export class Product {
     return this.hasDiscount() ? `${Math.round(this.discount! * 100)}% OFF` : "";
   }
 
-   // 🔥 GETTERS COM VALIDAÇÃO
+  // 🔥 GETTERS COM VALIDAÇÃO
   public get starRating(): string {
     const rate = this.rating?.rate ?? 0; // Garante valor numérico
     const fullStars = Math.floor(rate);
@@ -62,23 +64,22 @@ export class Product {
     return stars + halfStar + emptyStars;
   }
 
-   public get fullStars(): number {
+  public get fullStars(): number {
     return Math.floor(this.rating?.rate ?? 0);
   }
 
-    public get hasHalfStar(): boolean {
+  public get hasHalfStar(): boolean {
     return (this.rating?.rate ?? 0) % 1 >= 0.5;
   }
 
-   public get emptyStars(): number {
+  public get emptyStars(): number {
     return 5 - Math.ceil(this.rating?.rate ?? 0);
   }
 
   public get formattedCategory(): string {
-    const categoryName = typeof this.category === 'object' 
-      ? this.category.name 
-      : this.category;
-    
+    const categoryName =
+      typeof this.category === "object" ? this.category.name : this.category;
+
     const categoryMap: Record<string, string> = {
       "men's clothing": "Moda Masculina",
       "women's clothing": "Moda Feminina",
@@ -89,12 +90,14 @@ export class Product {
       shoes: "Calçados",
       miscellaneous: "Diversos",
     };
-    return categoryMap[categoryName?.toLowerCase()] || categoryName || "Produto";
+    return (
+      categoryMap[categoryName?.toLowerCase()] || categoryName || "Produto"
+    );
   }
 
   public getCategoryName(): string {
     if (!this.category) return "Produto";
-    if (typeof this.category === 'object' && this.category.name) {
+    if (typeof this.category === "object" && this.category.name) {
       return this.category.name;
     }
     return this.category;
@@ -105,6 +108,9 @@ export class Product {
   }
 
   public getStarRatingDisplay(): string {
+    if (!this.rating || typeof this.rating !== "object") {
+      return "☆☆☆☆☆";
+    }
     return this.starRating;
   }
 
@@ -143,8 +149,8 @@ export class Product {
   }
 
   public static fromAPI(data: any): Product {
-    if (!data || typeof data !== 'object') {
-      throw new Error('Dados inválidos para criar produto');
+    if (!data || typeof data !== "object") {
+      throw new Error("Dados inválidos para criar produto");
     }
     return new Product(data);
   }

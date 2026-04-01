@@ -16,10 +16,14 @@
     </div>
     <div class="product-info">
       <h3 class="product-title">{{ truncateTitle(product.title) }}</h3>
-      <div class="product-rating" v-if="hasRating">
-        <span class="stars">{{ getStarRating(product.rating.rate) }}</span>
-        <span class="count">({{ product.rating.count }})</span>
-      </div>
+      <div class="product-rating" v-if="hasRating && product.rating.rate !== undefined">
+  <span class="stars">{{ getStarRating(product.rating.rate) }}</span>
+  <span class="count">({{ product.rating.count || 0 }})</span>
+</div>
+<div class="product-rating" v-else>
+  <span class="stars">☆☆☆☆☆</span>
+  <span class="count">(0)</span>
+</div>
       <div class="product-price">
         <span class="price">{{ formatPrice(product.price) }}</span>
         <div class="add-to-cart-wrapper">
@@ -82,11 +86,12 @@ const productImage = computed(() => {
   return '/placeholder-image.jpg'
 })
 
-// Verificar se o produto tem rating
 const hasRating = computed(() => {
   return props.product.rating && 
+         typeof props.product.rating === 'object' &&
          props.product.rating.rate !== undefined && 
-         props.product.rating.count !== undefined
+         props.product.rating.rate !== null &&
+         !isNaN(props.product.rating.rate)
 })
 
 const truncateTitle = (title: string) => {
@@ -94,13 +99,14 @@ const truncateTitle = (title: string) => {
   return title.length > 50 ? title.substring(0, 47) + '...' : title
 }
 
-const getStarRating = (rate: number) => {
-  const fullStars = Math.floor(rate)
-  const hasHalfStar = rate % 1 >= 0.5
+const getStarRating = (rate: number): string => {
+  const safeRate = rate || 0
+  const fullStars = Math.floor(safeRate)
+  const hasHalfStar = safeRate % 1 >= 0.5
   let stars = ''
   for (let i = 0; i < fullStars; i++) stars += '★'
   if (hasHalfStar) stars += '½'
-  for (let i = 0; i < 5 - Math.ceil(rate); i++) stars += '☆'
+  for (let i = 0; i < 5 - Math.ceil(safeRate); i++) stars += '☆'
   return stars
 }
 

@@ -82,9 +82,12 @@
                       {{ truncateTitle(item.product.title) }}
                     </h3>
                     <span class="product-category-premium">{{ formatCategory(item.product.category) }}</span>
-                    <div class="product-rating" v-if="item.product.rating">
-                      <span class="stars">★ {{ item.product.rating.rate }}</span>
-                    </div>
+                    <div class="product-rating" v-if="item.product.rating && item.product.rating.rate">
+  <span class="stars">★ {{ item.product.rating.rate.toFixed(1) }}</span>
+</div>
+<div class="product-rating" v-else>
+  <span class="stars">☆ Sem avaliação</span>
+</div>
                   </div>
                 </div>
               </div>

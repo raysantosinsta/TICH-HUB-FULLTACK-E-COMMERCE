@@ -42,11 +42,12 @@ export const useProductsStore = defineStore("products", () => {
   });
 
   /** Produtos mais bem avaliados (top 10) */
-  const topRatedProducts = computed(() => {
-    return [...products.value]
-      .sort((a, b) => (b.rating?.rate || 0) - (a.rating?.rate || 0))
-      .slice(0, 10);
-  });
+ const topRatedProducts = computed(() => {
+  return [...products.value]
+    .filter(p => p.rating && typeof p.rating === 'object')
+    .sort((a, b) => (b.rating?.rate || 0) - (a.rating?.rate || 0))
+    .slice(0, 10)
+})
 
   // ========== MÉTODOS PRIVADOS ==========
 
